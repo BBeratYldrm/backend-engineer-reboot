@@ -16,5 +16,10 @@ public class StreamDemo {
                 .collect(Collectors.toList());
 
         System.out.println(result);
+
+        List<Integer> result2 = list.stream()
+                .filter(x -> x % 2 == 0)
+                .map(x -> x * 2)
+                .toList();
     }
 }

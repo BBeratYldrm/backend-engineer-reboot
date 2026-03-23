@@ -1,11 +1,11 @@
 # Backend Engineer Reboot
 
-This repository tracks my backend engineering interview preparation.
+Backend Engineer Interview Prep
 
-Topics:
+Structure:
+- notes: theory
+- src: code
+- progress-journal: daily tracking
 
-- Algorithms
-- Java Core
-- System Design
-- Backend Architecture
-- Production Patterns
+Rule:
+Every topic = note + code + commit
