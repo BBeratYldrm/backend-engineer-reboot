@@ -1,3 +1,15 @@
+// == checks reference equality (same object in memory)
+// == kontrol eder: aynı nesne mi bellekte?
+
+// equals() checks value/logical equality (same content)
+// equals() kontrol eder: içerik aynı mı?
+
+// Example:
+// String a = new String("berat");
+// String b = new String("berat");
+// a == b       → false (different objects)
+// a.equals(b)  → true  (same content)
+
 package com.berat.reboot.javacore;
 
 import java.util.HashSet;
