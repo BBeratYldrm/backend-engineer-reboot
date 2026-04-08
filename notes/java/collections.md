@@ -35,3 +35,29 @@ LinkedList only when used as Queue/Deque
 ## HashSet
 - No duplicates
 - Backed by HashMap
+
+
+## HashMap Internals
+
+- 16 buckets by default
+- put("key", value):
+    1. hashCode("key") → which bucket?
+    2. If bucket has elements → equals() to check duplicates
+- get("key"):
+    1. hashCode("key") → go directly to bucket → O(1)
+    2. If collision → equals() check → O(n) for that bucket
+
+## Collision
+- Two keys → same bucket
+- HashMap chains them (linked list in bucket)
+- Too many collisions → O(1) becomes O(n)
+
+## Load Factor (default 0.75)
+- 16 buckets × 0.75 = 12 elements
+- After 12 elements → resize to 32 buckets
+- All elements redistributed (rehashing)
+
+## Interview answer:
+"HashMap uses hashCode to find the bucket in O(1),
+then equals to verify the key. Load factor controls
+when resizing happens to avoid too many collisions."
