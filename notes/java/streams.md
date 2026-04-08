@@ -1,17 +1,26 @@
-# Java Streams
+# Stream API
 
-## What is Stream?
-- Process collections in a functional way
+## Pipeline
+source → intermediate operations → terminal operation
 
-## Common Operations
+## Intermediate (lazy — terminal gelene kadar çalışmaz)
+- filter(predicate) → condition'a uyanlar
+- map(function) → her elemana işlem
+- sorted() → sırala
+- distinct() → unique elemanlar
 
-map → transform data  
-filter → select data  
-forEach → iterate  
-collect → convert to list
+## Terminal (stream'i bitirir)
+- collect(Collectors.toList()) / toList()
+- reduce(identity, accumulator)
+- sum() / count() / min() / max()
+- forEach()
 
-## Example
-list.stream()
-.filter(x -> x > 5)
-.map(x -> x * 2)
-.collect(Collectors.toList());
+## Real example:
+numbers.stream()
+.filter(n -> n % 2 == 0)
+.map(n -> n * n)
+.toList();
+
+## Interview one-liner:
+"Streams are lazy — intermediate operations don't run
+until a terminal operation is called."
