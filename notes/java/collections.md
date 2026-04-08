@@ -61,3 +61,14 @@ LinkedList only when used as Queue/Deque
 "HashMap uses hashCode to find the bucket in O(1),
 then equals to verify the key. Load factor controls
 when resizing happens to avoid too many collisions."
+
+
+## HashSet Internals
+
+- Backed by HashMap internally
+- add("x") → HashMap.put("x", PRESENT)
+- No duplicates because HashMap keys are unique
+- Same mechanism: hashCode → bucket → equals
+
+## One liner for interview:
+"HashSet is just a HashMap where we only care about keys."
