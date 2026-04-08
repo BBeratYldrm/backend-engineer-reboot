@@ -19,4 +19,11 @@ public class ContainsDuplicate {
         return false; // I will return false if there is no duplicate
     }
 
+
+    public static void main(String[] args) {
+        ContainsDuplicate solution = new ContainsDuplicate();
+
+        System.out.println(solution.containsDuplicate(new int[]{1,2,3,1})); // true
+        System.out.println(solution.containsDuplicate(new int[]{1,2,3,4})); // false
+    }
 }
