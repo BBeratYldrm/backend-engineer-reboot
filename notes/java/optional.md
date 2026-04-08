@@ -5,7 +5,17 @@
 - Forces caller to handle the empty case
 
 ## Common usage — DAO/Repository layer
-Optional<User> findByEmail(String email);
+- // Başka bir yerde: 
+  - Optional<User> optionalUser = findUserByEmail("berat@gmail.com");
+
+- // Kullanım 1 — varsa işlem yap
+  - optionalUser.ifPresent(user -> System.out.println(user.getName()));
+
+- // Kullanım 2 — yoksa default değer
+  - User user = optionalUser.orElse(new GuestUser());
+
+- // Kullanım 3 — yoksa exception fırlat
+  - User user = optionalUser.orElseThrow(() -> new UserNotFoundException("User not found"));
 
 ## Key methods
 - Optional.ofNullable(value) → wrap, null olabilir

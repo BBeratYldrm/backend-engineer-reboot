@@ -4,18 +4,22 @@
 - HashSet internals — backed by HashMap
 - HashMap: duplicate keys override, values can duplicate
 - Two Sum — complement = target - nums[i]
-  - HashMap key=number, value=index
-  - Check complement first, then add to map
-- Contains Duplicate — HashSet, seen before? return true
+- Contains Duplicate — HashSet
+- OOP — Encapsulation, Polymorphism
+- SOLID — S, O, L, I, D (tamamı)
+- Stream API — filter, map, reduce, lazy, count
+- Optional — usage, anti-patterns
+- Functional Interfaces — Predicate, Function, Supplier
 
-## Patterns I now recognize
-- "Have I seen this before?" → HashSet
-- "What was the index/value of X?" → HashMap
-- "Two numbers sum to target?" → complement = target - current
+## Quiz Results
+- SOLID quiz: 4/4
+- General quiz: 5/5
 
 ## How I feel
-Hard day emotionally. But I kept going.
-Two algorithms solved. Starting to see patterns.
+Long day. But I kept going.
+Starting to recognize patterns.
 
 ## Tomorrow
-- Spring Boot DI — Dependency Injection deep dive
+- Functional Interfaces deep dive
+- Records (Modern Java)
+- Spring Boot DI — başlıyoruz
