@@ -27,3 +27,16 @@ internal state and controlling access through methods."
 ## Interview one-liner:
 "Polymorphism lets us add new behaviors without modifying
 existing code — we extend, not change."
+
+## SOLID — S: Single Responsibility Principle
+- A class should have only ONE reason to change
+- If a class does 4 things → 4 reasons to change → split it
+
+## Real example:
+- UserService doing validate + save + email + log → WRONG
+- UserValidator, UserRepository, WelcomeEmailSender → each does 1 thing
+
+## Interview one-liner:
+"SRP means a class should have only one reason to change.
+If it does multiple things, split it into focused classes."
+
