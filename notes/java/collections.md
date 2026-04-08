@@ -72,3 +72,6 @@ when resizing happens to avoid too many collisions."
 
 ## One liner for interview:
 "HashSet is just a HashMap where we only care about keys."
+
+- Duplicate keys → old value gets replaced (override)
+- Duplicate values → allowed, no problem
