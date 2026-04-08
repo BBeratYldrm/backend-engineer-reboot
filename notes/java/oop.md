@@ -40,3 +40,16 @@ existing code — we extend, not change."
 "SRP means a class should have only one reason to change.
 If it does multiple things, split it into focused classes."
 
+## SOLID — L: Liskov Substitution Principle
+- Subclass must be substitutable for its parent
+- If subclass breaks parent's behavior → LSP violation
+
+## Real example:
+- Penguin extends Bird, fly() throws exception → WRONG
+- Solution: remove fly() from Bird, create Flyable interface
+- Only flying birds implement Flyable
+
+## Interview one-liner:
+"LSP means a subclass should be usable anywhere the parent
+is used, without breaking the program."
+
