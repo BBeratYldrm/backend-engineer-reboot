@@ -6,11 +6,16 @@
 - Two Sum — complement = target - nums[i]
   - HashMap key=number, value=index
   - Check complement first, then add to map
+- Contains Duplicate — HashSet, seen before? return true
+
+## Patterns I now recognize
+- "Have I seen this before?" → HashSet
+- "What was the index/value of X?" → HashMap
+- "Two numbers sum to target?" → complement = target - current
 
 ## How I feel
-Not fully confident yet. But I understood the steps.
-That's enough for today.
+Hard day emotionally. But I kept going.
+Two algorithms solved. Starting to see patterns.
 
 ## Tomorrow
-- One more HashMap problem (Contains Duplicate)
-- Then: Spring Boot DI
+- Spring Boot DI — Dependency Injection deep dive
