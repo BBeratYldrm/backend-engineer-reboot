@@ -53,3 +53,15 @@ If it does multiple things, split it into focused classes."
 "LSP means a subclass should be usable anywhere the parent
 is used, without breaking the program."
 
+## SOLID — I: Interface Segregation Principle
+- Don't force classes to implement methods they don't need
+- Split large interfaces into smaller, focused ones
+
+## Real example:
+- Worker interface: work() + eat() + sleep() → Robot can't eat/sleep
+- Solution: Workable, Eatable, Sleepable → separate interfaces
+- Robot implements only Workable
+
+## Interview one-liner:
+"ISP says interfaces should be small and focused.
+Don't force classes to implement what they don't need."
