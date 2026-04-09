@@ -211,6 +211,8 @@ The question I ask myself:
 
 ---
 
+---
+
 # [2.2] Spring Boot
 
 ## [2.2.1] Auto-configuration
@@ -248,3 +250,40 @@ The question I ask myself:
 → Is the right starter in pom.xml?
 → Is the required property set in application.yml?
 → Turn on DEBUG logging to see what Spring is checking
+
+---
+
+## [2.2.2] Profiles & Config
+
+Problem:
+Different environments need different configurations.
+Changing yml manually per environment = error-prone and risky.
+
+Solution — profile-specific yml files:
+application.yml          → shared config
+application-local.yml    → local environment
+application-stg.yml      → staging
+application-prod.yml     → production
+
+Activate:
+spring.profiles.active: local   (in yml)
+--spring.profiles.active=prod   (at startup)
+SPRING_PROFILES_ACTIVE=prod     (environment variable — Kubernetes)
+
+Security rule:
++ Local → hardcoded credentials acceptable
++ STG/Prod → always use environment variables
+
+application-local.yml:
+username: root
+password: 123
+
+application-prod.yml:
+username: ${DB_USERNAME}
+password: ${DB_PASSWORD}
+
+The question I ask myself:
+"Is this config value environment-specific?"
++ Yes → move to profile-specific yml
++ Is it a credential? → environment variable in non-local envs
+
