@@ -286,4 +286,34 @@ The question I ask myself:
 "Is this config value environment-specific?"
 + Yes → move to profile-specific yml
 + Is it a credential? → environment variable in non-local envs
+---
+
+## [2.2.3] Actuator
+
+Problem:
+How do you know if your production app is healthy?
+Is the DB connected? Is memory running out?
+
+Solution — Actuator exposes built-in endpoints:
+/actuator/health     → is app healthy? DB, Redis, MQ connections
+/actuator/prometheus → metrics for Prometheus/Grafana
+/actuator/heapdump   → memory snapshot for debugging
+
+Configure which endpoints to expose:
+management:
+endpoints:
+web:
+exposure:
+include: health, prometheus, heapdump
+
+Real usage at Rakuten:
+Prometheus scraped /actuator/prometheus
+Grafana visualized the metrics
+Alerts fired when thresholds were breached
+
+The question I ask myself:
+"How do I monitor this service in production?"
++ Add Actuator + expose prometheus endpoint
++ Let Prometheus scrape it
++ Build Grafana dashboard on top
 
