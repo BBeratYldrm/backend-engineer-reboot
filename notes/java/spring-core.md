@@ -85,3 +85,36 @@ public class OrderService {
 "Does this class hold any instance variables that change?"
 → Yes → move state out (DB, cache, method params)
 → No → safe as Singleton
+
+# @Transactional
+
+## What it does
+Wraps method in a transaction.
+Either everything succeeds (commit) or nothing happens (rollback).
+
+## How Spring does it — Proxy
+Spring puts a proxy between caller and your service.
+Proxy opens transaction → your method runs → Proxy commits or rolls back.
+
+## Tuzak 1 — Self Invocation
+Calling @Transactional method from same class bypasses proxy.
+Proxy never knows the call happened → no transaction.
+
+- Fix: move @Transactional method to a separate service
+
+## Tuzak 2 — Checked vs Unchecked
+Unchecked (RuntimeException) → automatic rollback
+Checked (IOException, SQLException) → NO rollback by default
+
+- Why: Checked means "you expected this" — Spring says "you handle it"
+- Fix: @Transactional(rollbackFor = Exception.class)
+
+## Checked vs Unchecked — quick reference
+Checked   → external problems (file, network, DB) — must catch or declare
+Unchecked → programming errors (null, wrong index) — no forced handling
+
+## The question I ask myself
+"Can this method fail silently and leave data inconsistent?"
++ Yes → @Transactional
++ Is it called from same class? → move to separate service
++ Can it throw checked exception? → add rollbackFor
