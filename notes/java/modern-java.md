@@ -43,3 +43,24 @@ Records can implement interfaces but cannot extend classes.
 ## Real example from work
 UserResponse, OrderRequest, ErrorResponse → all Records.
 User, Order, BankAccount → always Class.
+
+# JVM Memory — What I need to know
+
+## Three areas
+→ Heap: where objects live (new User(), new ArrayList())
+→ Stack: method calls, local variables, primitives
+→ Metaspace: class definitions (not objects)
+
+## Garbage Collection
+→ When no reference points to an object, GC cleans it up
+→ We don't control when — JVM decides
+→ Help GC by not holding references you don't need
+
+## Two errors I should recognize
+→ StackOverflowError: infinite recursion, stack fills up
+→ OutOfMemoryError: too many objects, heap fills up
+
+## The question I ask myself
+"Where does this live?"
+→ new Something() → Heap
+→ int x = 5 inside a method → Stack
