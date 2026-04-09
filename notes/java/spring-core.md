@@ -146,6 +146,34 @@ The question I ask myself:
 
 ---
 
+## [2.1.5] AOP — Aspect Oriented Programming
+Note: Know the concept, don't need to write it from scratch.
+
+Problem it solves:
+Cross-cutting concerns — logging, security, transactions —
+repeated across many methods. AOP centralizes them.
+
+How it works:
+→ You define an Aspect (where and what)
+→ Spring applies it automatically via proxy
+
+Key terms:
+→ Aspect: class containing the cross-cutting logic
+→ Advice: what to do (@Before, @After, @Around)
+→ Pointcut: which methods to target
+
+Real usage:
++ Logging — log every service method automatically
++ Security — @PreAuthorize works via AOP
++ Transactions — @Transactional is AOP under the hood
++ Performance monitoring — measure method execution time
+
+Anti-pattern:
+- Never put business logic in an Aspect
+- Aspects are for infrastructure concerns only
+
+---
+
 # [2.2] @Transactional
 
 ## What it does
