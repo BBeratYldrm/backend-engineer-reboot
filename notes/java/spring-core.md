@@ -52,3 +52,36 @@ Modern approach:
 → Spring 4.3+: single constructor auto-detected, no @Autowired needed
 → Lombok @RequiredArgsConstructor: generates constructor automatically
 → Result: clean, immutable, testable — zero boilerplate
+
+## Bean Scopes
+
+→ Singleton (default): one instance for entire application
+All injections share the same object
+
+→ Prototype: new instance every time it's injected
+Rare — use when each caller needs own state
+
+→ Request: new instance per HTTP request
+Useful for request-scoped data (current user, request id)
+
+## Critical rule — Singleton must be stateless
+Singleton beans are shared across all threads.
+Storing state in a Singleton = race condition waiting to happen.
+
+- Wrong:
+@Service // Singleton
+public class OrderService {
+private int count = 0; // shared across all threads!
+}
+
++ Right:
+@Service
+public class OrderService {
+// no state — just behavior
+// if state needed → database or Redis
+}
+
+## The question I ask myself
+"Does this class hold any instance variables that change?"
+→ Yes → move state out (DB, cache, method params)
+→ No → safe as Singleton
