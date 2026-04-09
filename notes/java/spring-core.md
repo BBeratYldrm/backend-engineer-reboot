@@ -36,3 +36,19 @@ public void setPaymentService(PaymentService p) { ... }
 → Constructor injection: Yes
 → Field injection: No
 
+## Why @Autowired exists but should be avoided
+
+Historical context:
+→ Created to replace verbose XML configuration
+→ Was revolutionary in 2004-2010 era
+→ Made DI much easier
+
+Why avoid now:
+→ Too easy to add dependencies — class grows silently
+→ SRP violations hide easily — no one notices
+→ Constructor injection makes pain visible — and that's good
+
+Modern approach:
+→ Spring 4.3+: single constructor auto-detected, no @Autowired needed
+→ Lombok @RequiredArgsConstructor: generates constructor automatically
+→ Result: clean, immutable, testable — zero boilerplate
