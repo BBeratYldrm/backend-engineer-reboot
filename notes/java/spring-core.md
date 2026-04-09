@@ -71,6 +71,21 @@ Rare — use when each caller needs own state
 → Request: new instance per HTTP request
 Useful for request-scoped data (current user, request id)
 
+## How to recognize a Singleton bean
+@Service, @Component, @Repository, @Controller → all Singleton by default
+If no @Scope annotation → it's a Singleton
+
+## Interview pattern — how it gets asked
+Not "what is Singleton?" but:
+"What's wrong with this code?"
+→ Look for instance variables that change inside @Service classes
+→ That's the red flag
+
+## The 3 fixes when state is needed
+→ Method parameter — short-lived, simple data
+→ Database — persistent data
+→ Redis — fast access, temporary data (sessions, cache)
+
 ## Critical rule — Singleton must be stateless
 Singleton beans are shared across all threads.
 Storing state in a Singleton = race condition waiting to happen.
