@@ -1,6 +1,11 @@
-# Spring Boot — Core Concepts
+# Phase 2 — Spring Ecosystem
 
-## IoC Container
+---
+
+# [2.1] Spring Core
+
+## [2.1.1] IoC Container & Dependency Injection
+
 Spring manages object creation and dependencies.
 We don't new() our dependencies — Spring does it.
 
@@ -11,19 +16,19 @@ On startup Spring:
 → Creates instances
 → Injects dependencies via constructor
 
-## Dependency Injection — 3 ways
+## DI — 3 ways
 
-→ Constructor injection (preferred)
-private final PaymentService paymentService;
-public OrderService(PaymentService p) { this.paymentService = p; }
++ Constructor injection (preferred)
+  private final PaymentService paymentService;
+  public OrderService(PaymentService p) { this.paymentService = p; }
 
-→ Field injection (avoid)
-@Autowired
-private PaymentService paymentService;
+- Field injection (avoid)
+  @Autowired
+  private PaymentService paymentService;
 
-→ Setter injection (rare, optional dependencies only)
-@Autowired
-public void setPaymentService(PaymentService p) { ... }
+- Setter injection (rare, optional dependencies only)
+  @Autowired
+  public void setPaymentService(PaymentService p) { ... }
 
 ## Why constructor injection wins
 → Supports final fields — immutable
@@ -31,10 +36,10 @@ public void setPaymentService(PaymentService p) { ... }
 → Dependencies are explicit — visible in constructor signature
 → Circular dependency detected at startup, not runtime
 
-## The question I ask myself
+The question I ask myself:
 "Can I test this class without starting Spring?"
-→ Constructor injection: Yes
-→ Field injection: No
++ Constructor injection: Yes
+- Field injection: No
 
 ## Why @Autowired exists but should be avoided
 
@@ -53,7 +58,9 @@ Modern approach:
 → Lombok @RequiredArgsConstructor: generates constructor automatically
 → Result: clean, immutable, testable — zero boilerplate
 
-## Bean Scopes
+---
+
+## [2.1.2] Bean Scopes
 
 → Singleton (default): one instance for entire application
 All injections share the same object
@@ -69,24 +76,51 @@ Singleton beans are shared across all threads.
 Storing state in a Singleton = race condition waiting to happen.
 
 - Wrong:
-@Service // Singleton
-public class OrderService {
-private int count = 0; // shared across all threads!
-}
+  @Service
+  public class OrderService {
+  private int count = 0; // shared across all threads!
+  }
 
 + Right:
-@Service
-public class OrderService {
-// no state — just behavior
-// if state needed → database or Redis
-}
+  @Service
+  public class OrderService {
+  // no state — just behavior
+  // if state needed → database or Redis
+  }
 
-## The question I ask myself
+The question I ask myself:
 "Does this class hold any instance variables that change?"
 → Yes → move state out (DB, cache, method params)
 → No → safe as Singleton
 
-# @Transactional
+---
+
+## [2.1.3] Bean Lifecycle
+
+Three stages:
+→ Instantiation: Spring creates the object (new)
+→ Initialization: @PostConstruct runs — dependencies are ready
+→ Destruction: @PreDestroy runs — app is shutting down
+
+@PostConstruct — use for:
++ Loading cache on startup
++ Validating configuration
++ Opening connections
+
+@PreDestroy — use for:
++ Closing connections
++ Flushing cache
++ Releasing resources
+
+The question I ask myself:
+"Do I need something to happen right after the bean is ready?"
++ Yes → @PostConstruct
+  "Do I need cleanup when app shuts down?"
++ Yes → @PreDestroy
+
+---
+
+# [2.2] @Transactional
 
 ## What it does
 Wraps method in a transaction.
@@ -96,24 +130,24 @@ Either everything succeeds (commit) or nothing happens (rollback).
 Spring puts a proxy between caller and your service.
 Proxy opens transaction → your method runs → Proxy commits or rolls back.
 
-## Tuzak 1 — Self Invocation
+## Pitfall 1 — Self Invocation
 Calling @Transactional method from same class bypasses proxy.
 Proxy never knows the call happened → no transaction.
 
-- Fix: move @Transactional method to a separate service
++ Fix: move @Transactional method to a separate service
 
-## Tuzak 2 — Checked vs Unchecked
+## Pitfall 2 — Checked vs Unchecked
 Unchecked (RuntimeException) → automatic rollback
 Checked (IOException, SQLException) → NO rollback by default
 
 - Why: Checked means "you expected this" — Spring says "you handle it"
-- Fix: @Transactional(rollbackFor = Exception.class)
++ Fix: @Transactional(rollbackFor = Exception.class)
 
 ## Checked vs Unchecked — quick reference
 Checked   → external problems (file, network, DB) — must catch or declare
 Unchecked → programming errors (null, wrong index) — no forced handling
 
-## The question I ask myself
+The question I ask myself:
 "Can this method fail silently and leave data inconsistent?"
 + Yes → @Transactional
 + Is it called from same class? → move to separate service
