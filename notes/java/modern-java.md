@@ -64,3 +64,35 @@ User, Order, BankAccount → always Class.
 "Where does this live?"
 → new Something() → Heap
 → int x = 5 inside a method → Stack
+
+# Thread Management — What I need to know
+
+## The core problem — Race Condition
+Two threads read-modify-write the same variable simultaneously.
+Result: data corruption. One thread overwrites the other.
+
+## Real example
+count++ is NOT atomic. It's three steps:
+→ read count
+→ add 1
+→ write back
+Two threads can interleave these steps → wrong result.
+
+## Two solutions I should know
+
+→ synchronized: only one thread enters at a time
+Simple but slow — other threads wait (blocked)
+
+→ AtomicInteger: CPU-level atomic operation
+Faster than synchronized — no blocking
+Use when you just need a thread-safe counter
+
+## The question I ask myself
+"Can two threads touch this variable at the same time?"
+→ Yes → make it thread-safe (synchronized or Atomic)
+→ No → don't over-engineer it
+
+## What I should recognize in an interview
+→ Race condition → shared mutable state + multiple threads
+→ Deadlock → two threads waiting for each other forever
+→ Solution → synchronized, AtomicInteger, or avoid shared state
