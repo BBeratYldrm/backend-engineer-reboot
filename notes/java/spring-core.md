@@ -174,7 +174,9 @@ Anti-pattern:
 
 ---
 
-# [2.2] @Transactional
+# @Transactional
+Note: Technically belongs under [2.4] Spring Data, but covered
+here because it directly builds on [2.1.4] Proxy Mechanism.
 
 ## What it does
 Wraps method in a transaction.
@@ -206,3 +208,43 @@ The question I ask myself:
 + Yes → @Transactional
 + Is it called from same class? → move to separate service
 + Can it throw checked exception? → add rollbackFor
+
+---
+
+# [2.2] Spring Boot
+
+## [2.2.1] Auto-configuration
+
+Spring Boot automatically configures beans based on:
+→ What's on the classpath (which starters you added)
+→ What's in application.yml (which properties you set)
+
+How it works — @ConditionalOnClass:
+Spring Boot ships with hundreds of auto-configuration classes.
+Each one checks conditions before activating.
+
+Example — DataSource auto-configuration:
++ Is DataSource.class on classpath? (comes with JPA starter)
++ Is spring.datasource.url set in yml?
++ Both true → Spring auto-creates DataSource, EntityManager, TransactionManager
+
+You never write this — Spring Boot does it.
+You just add the starter + set properties.
+
+Starters are bundles:
+spring-boot-starter-data-jpa brings:
+→ spring-data-jpa
+→ hibernate
+→ jdbc
+→ HikariCP (connection pool)
+
+How to debug auto-configuration:
+Add to application.yml:
+logging.level.org.springframework.boot.autoconfigure: DEBUG
+Spring will log every condition check — what activated and why.
+
+The question I ask myself:
+"Why is my bean not being created automatically?"
+→ Is the right starter in pom.xml?
+→ Is the required property set in application.yml?
+→ Turn on DEBUG logging to see what Spring is checking
