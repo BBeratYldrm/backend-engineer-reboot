@@ -120,6 +120,32 @@ The question I ask myself:
 
 ---
 
+## [2.1.4] Proxy Mechanism
+
+Spring wraps beans in a proxy — caller never talks to bean directly.
+Proxy adds behavior: transactions, security, logging.
+
+Two types:
+
++ JDK Proxy — when bean implements an interface
+  Proxy wraps only interface methods
+  Preferred when interface exists
+
++ CGLIB Proxy — when no interface exists
+  Proxy extends the class (creates subclass)
+  Default in Spring Boot for @Service, @Component
+
+Critical rule — CGLIB beans cannot be final:
+CGLIB creates a subclass → final class cannot be extended → error
+
+The question I ask myself:
+"Why is my @Transactional not working?"
+→ Is it a self invocation? (same class call)
+→ Is the class final? (CGLIB cannot proxy it)
+→ Is the method private? (proxy cannot override it)
+
+---
+
 # [2.2] @Transactional
 
 ## What it does
