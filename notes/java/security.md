@@ -58,6 +58,26 @@ When to use:
 Session → Monolith, server-side rendering (Thymeleaf), instant logout required
 JWT    → REST API, microservices, mobile apps
 
+## JWT Weakness & Solution
+
+Weakness:
+Stolen JWT cannot be invalidated — no server-side record.
+Token stays valid until expiry.
+Logout doesn't work instantly.
+
+Solution — Refresh Token in DB/Redis:
+Access token  → short lived (15 min), stateless, not stored
+Refresh token → long lived, stored in DB or Redis
+
+On logout:
+→ Delete refresh token from DB/Redis
+→ No new access token can be obtained
+→ Existing access token expires in 15 min
+
+Trade-off:
+Not fully stateless anymore — but only refresh token is stored.
+Access token validation still stateless → performance maintained.
+
 ## JWT Structure
 eyJhbGc.eyJzdWI.signature
 
