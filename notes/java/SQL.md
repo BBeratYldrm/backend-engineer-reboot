@@ -106,3 +106,33 @@ Using temporary  → temporary table created → bad
 Real usage at Rakuten:
 Ran EXPLAIN on slow queries → found type: ALL, key: NULL
 → Added indexes → response time dropped from 8s to under 3s
+
+## Transaction Isolation
+
+Three concurrency problems:
+Dirty Read          → reading uncommitted data from another transaction
+Non-Repeatable Read → same query returns different results within transaction
+Phantom Read        → same query returns different row count within transaction
+
+Isolation levels (weakest → strongest):
+READ UNCOMMITTED → allows dirty reads (almost never used)
+READ COMMITTED   → no dirty reads (PostgreSQL default)
+REPEATABLE READ  → no dirty/non-repeatable reads (MySQL default)
+SERIALIZABLE     → no problems, but very slow
+
+## Optimistic vs Pessimistic Locking
+
+Pessimistic — lock first, ask questions later:
+→ Use when conflicts are likely (reservations, tickets, stock)
+→ Row is locked until transaction completes
+→ @Lock(LockModeType.PESSIMISTIC_WRITE) in Spring
+
+Optimistic — try first, retry if conflict:
+→ Use when conflicts are rare (profile updates, blog posts)
+→ @Version column — if version changed, throw exception
+→ Caller retries the operation
+
+The question I ask myself:
+"How often will two users touch the same row at the same time?"
++ Often → Pessimistic
++ Rarely → Optimistic
