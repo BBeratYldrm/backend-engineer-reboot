@@ -136,3 +136,33 @@ The question I ask myself:
 "How often will two users touch the same row at the same time?"
 + Often → Pessimistic
 + Rarely → Optimistic
+
+## ACID
+
+A — Atomicity
+All or nothing. If any step fails → entire transaction rolls back.
+Transfer: debit + credit → both happen or neither happens.
+
+C — Consistency
+DB always remains in a valid state.
+Business rules are never violated (balance can't go negative).
+Constraints, foreign keys always hold.
+
+I — Isolation
+Concurrent transactions don't interfere with each other.
+Controlled by isolation level (Read Committed, Repeatable Read etc.)
+
+D — Durability
+Committed data survives crashes.
+Once you get "commit successful" → data is safe on disk.
+
+Connection to Spring:
+@Transactional provides ACID automatically.
+Atomicity → rollback on exception
+Isolation → configurable via isolation parameter
+Durability → guaranteed by the database engine
+
+Interview one-liner:
+"ACID ensures database transactions are reliable.
+SQL databases guarantee ACID. Most NoSQL databases trade
+some ACID properties for performance and scalability."
