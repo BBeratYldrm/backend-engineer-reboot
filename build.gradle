@@ -19,4 +19,18 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.11.0'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+configurations {
+    testRuntimeClasspath {
+        resolutionStrategy {
+            force 'org.junit.platform:junit-platform-launcher:1.11.0'
+        }
+    }
 }
