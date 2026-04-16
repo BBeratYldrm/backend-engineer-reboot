@@ -54,6 +54,6 @@ public class UrlShortenerTest {
         executor.awaitTermination(5, TimeUnit.SECONDS);
 
         // no entries should be lost — map must have exactly 100
-        assertEquals(100, urlShortener.urlShortener.size());
+        assertEquals(100, urlShortener.codeToUrl.size());
     }
 }
