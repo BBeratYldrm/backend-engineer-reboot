@@ -1,5 +1,8 @@
 package com.berat.reboot.algorithms;
 
+import java.util.Arrays;
+import java.util.Collections;
+
 public class ReverseWords {
 
     /**
@@ -23,6 +26,12 @@ public class ReverseWords {
 
         // trim the trailing space we added in the loop
         return result.toString().trim();
+    }
+
+    public String reverseWordsAlternative(String input) {
+        String[] words = input.trim().split("\\s+");
+        Collections.reverse(Arrays.asList(words));
+        return String.join(" ", words);
     }
 
     public static void main(String[] args) {
