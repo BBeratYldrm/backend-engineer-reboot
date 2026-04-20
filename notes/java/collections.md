@@ -9,7 +9,7 @@
 - Node based structure
 - Fast insert/delete
 - Slow access
-- 
+
 ## ArrayList vs LinkedList — Real World
 
 | Operation | ArrayList | LinkedList |
