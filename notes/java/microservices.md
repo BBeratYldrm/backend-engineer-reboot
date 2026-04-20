@@ -37,3 +37,21 @@ Fraud Detection recovers without extra load
 Rakuten example:
 Reservation → Payment → response needed → synchronous
 Reservation → Email → no response needed → ActiveMQ (async)
+
+## Circuit Breaker — Implementation
+
+Library: Resilience4j (works with or without Spring)
+
+With Spring:
+@CircuitBreaker(name = "fraudDetection", fallbackMethod = "fallback")
+public Result check(Payment p) { ... }
+
+Without Spring (pure Java):
+CircuitBreaker cb = CircuitBreakerRegistry.ofDefaults()
+.circuitBreaker("fraudDetection");
+Supplier<Result> supplier = CircuitBreaker.decorateSupplier(cb, () -> check(p));
+
+Config:
+- failureRateThreshold: 50% → OPEN
+- waitDurationInOpenState: 30s → then HALF-OPEN
+- permittedCallsInHalfOpenState: 1 test request
