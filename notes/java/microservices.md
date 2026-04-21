@@ -144,3 +144,65 @@ The question I ask myself:
 "Do I need a central controller or can services react to events?"
 + Complex flow, strict order, financial → Orchestration
 + Independent services, scalability, event-driven → Choreography
+
+## CQRS — Command Query Responsibility Segregation
+
+Problem:
+Read and write operations have completely different needs.
+Write: complex validation, business rules, transactions, multiple tables
+Read: just fetch and display, needs speed, different shapes of data
+
+Forcing both through the same model creates bottlenecks as the system grows.
+
+Solution: separate the read and write models.
+
+Write side (Command):
+→ Handles business logic, validation, transactions
+→ Normalized DB — data integrity first
+→ Same complexity as before — nothing changes here
+
+Read side (Query):
+→ Pre-built, denormalized view of the data
+→ No joins, no complex queries — just fetch and return
+→ Think of it as a materialized view in the DB
+→ Can use a different storage (Redis, Elasticsearch) for speed
+
+How to keep the read model updated — 3 ways:
+1. Synchronous — update read model in same transaction → simple but slower writes
+2. Event-driven — write commits → publishes event → read model service updates → most common
+3. CDC (Change Data Capture) — tools like Debezium watch DB changes → update read model
+
+Most common in production:
+Write Service → "reservation.created" event → Kafka
+Read Model Service → listens → updates the read model
+
+Trade-off — Eventual Consistency:
+Read model update takes a few milliseconds after write.
+User might see stale data briefly.
+Usually acceptable — user already got "success" confirmation.
+
+When NOT acceptable:
+Critical operations where stale data = damage (e.g. balance check before withdrawal)
+
+Solution — Staleness management:
+For critical reads → read from write model directly
+For display-only → read from read model
+
+Real world:
+Banking app: transfer done → balance page shows old value for 1-2 seconds → then updates
+This is eventual consistency. Acceptable because user saw "transfer complete".
+
+ATM withdrawal: must read from write model — stale balance = overdraft disaster
+
+Rakuten connection:
+ReserveSaveDataService → write (4 tables, @Transactional)
+MyPage listing → read (could be a separate read model, no joins needed)
+This was in a monolith — in microservices it would be full CQRS.
+
+The question I ask myself:
+"Is this a display operation or a state-changing operation?"
++ Display → read model, eventual consistency OK
++ State change + critical → write model, strong consistency
+------
++ "CQRS is essentially SRP applied at the architectural level — the write model has one reason to change, the read model has another."
+
