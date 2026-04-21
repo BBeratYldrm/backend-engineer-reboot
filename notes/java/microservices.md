@@ -206,3 +206,37 @@ The question I ask myself:
 ------
 + "CQRS is essentially SRP applied at the architectural level — the write model has one reason to change, the read model has another."
 
+## API Gateway
+
+Not in the roadmap directly, but critical for microservices.
+
+Problem:
+Client knows all service addresses → fragile
+Auth, rate limiting, logging written in every service → duplication
+Multiple round-trips from mobile → slow
+
+Solution: Single entry point for all clients.
+
+What it does:
++ Single entry point → client knows only one address
++ Authentication — check token once, protect all services
++ Rate limiting — one place, all services protected
++ Load balancing — distributes traffic across instances
++ SSL termination → HTTPS outside, HTTP inside
++ Request aggregation → combines multiple service calls into one response
+
+Real world:
+Netflix → Zuul
+AWS → API Gateway
+Uber → single gateway for all mobile traffic
+
+Trade-offs:
+- Single point of failure → must be clustered and replicated
+- Can become a bottleneck → must be horizontally scaled
+- Don't put business logic here → only cross-cutting concerns
+
+The question I ask myself:
+"Is this cross-cutting concern (auth, rate limit, logging)
+or business logic?"
++ Cross-cutting → API Gateway
++ Business logic → belongs in the service
