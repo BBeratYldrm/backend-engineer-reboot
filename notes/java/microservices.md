@@ -240,3 +240,46 @@ The question I ask myself:
 or business logic?"
 + Cross-cutting → API Gateway
 + Business logic → belongs in the service
+
+## Service Decomposition & Data Ownership
+
+Problem with shared DB in microservices:
+Services are split but DB is shared — defeating the purpose.
+Single point of failure, tight coupling, no independent scaling.
+
+Database per service pattern:
+Each service owns its own DB.
+No other service connects to it directly.
+If another service needs the data → call its API.
+
+Data Ownership rule:
+Every piece of data has exactly one owner (one service that writes it).
+Other services read via API, never direct DB access.
+Amazon's Bezos API Mandate (2002) — "no direct DB access, API only, no exceptions"
+
+Service Decomposition — how to split:
+1. Business capability → Payment, Order, User, Inventory
+2. Bounded Context (DDD) → domain boundaries
+3. Data ownership → who writes this data? That's the service.
+
+When TO split into microservices:
++ Different teams working on same code → conflicts
++ Different scaling needs → Payment needs 10x more than Order
++ Different deployment frequency
++ Different technology needs
+
+When NOT to split:
+- Small system → Modular Monolith is enough
+- Small team → microservice overhead kills productivity
+- "Premature microservice" is the biggest anti-pattern
+
+Trade-off — Eventual Consistency:
+Database per service → no global transaction
+→ Use Saga for coordination
+→ Accept eventual consistency
+→ Stale data possible for short periods
+
+Real world:
+Amazon → Bezos API Mandate 2002, microservice pioneer
+Netflix → moved from monolith after 2008 outage, now 700+ services
+Uber → monolith until 2016, then domain-based services
