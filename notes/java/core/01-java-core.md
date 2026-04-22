@@ -129,3 +129,113 @@ The question I ask myself:
 "Will multiple threads access this map?"
 + Yes → ConcurrentHashMap, always
 + No → HashMap, faster
+
+## Encapsulation
+
+Make every field private by default.
+Only expose what's necessary — and when you do, add validation.
+
+Why private?
+→ External code can't put the object in an invalid state
+→ Rules live in one place — easy to change later
+→ "I control my own state"
+
+Three levels:
+1. Public field → no encapsulation, anyone can break it
+2. Private + blind getter/setter → weak encapsulation, no rules
+3. Private + validation → real encapsulation, object always valid
+
+When is validation needed?
+→ If an invalid value is possible → add a rule
+→ balance < 0? → validate
+→ age > 150? → validate
+→ name is any string? → private is enough, add rule later if needed
+
+public static final → exception, constants can be public (they never change)
+
+Interview tip:
+Public field → "Encapsulation violation — why is this public?"
+Private + no validation → "Weak encapsulation"
+Private + validation → "Strong encapsulation"
+
+Real world:
+Rakuten — ReserveSaveDataService validated all incoming data before saving
+Amazon — Order status can't be set directly, only through cancelOrder(), shipOrder()
+Rules live inside the object, not scattered across services
+
+The question I ask myself:
+"Can this field be set to an invalid value from outside?"
++ Yes → make it private + add validation
++ No → private is still good practice — rules might come later
+
+## Polymorphism
+
+Same interface, different behavior.
+The caller doesn't care HOW it's done — just WHAT it does.
+
+How to recognize it:
+→ Interface + multiple Impl classes
+→ List liste = new ArrayList() — upper type, lower implementation
+→ @Autowired in Spring — you see the interface, Spring injects the Impl
+→ Long if/else chain → sign that polymorphism is missing
+
+How Java decides at runtime:
+Dynamic dispatch — at runtime, Java checks which object the reference
+actually points to → calls that object's method.
+Decided at runtime, not compile time.
+
+Real world:
+Rakuten — ShopSearchService (interface) → ShopSearchServiceImpl
+Spring Data — JpaRepository interface → Spring generates the Impl
+Collections — List = new ArrayList() everywhere
+
+Interview tips:
+"Wherever you see an interface with multiple implementations — that's polymorphism."
+"Spring's DI system is built entirely on polymorphism."
+"Long if/else chains are a sign polymorphism is missing — violates OCP."
+
+The question I ask myself:
+"If I need to add a new type/behavior, do I need to modify existing code?"
++ Yes → polymorphism is missing
++ No → polymorphism is working correctly
+
+## Composition over Inheritance
+
+Two ways to reuse code:
+Inheritance (is-a) → Dog extends Animal
+Composition (has-a) → Car has-a Motor, has-a Brake
+
+Rule: prefer composition over inheritance.
+
+Why inheritance is dangerous:
+→ You inherit everything — wanted or not
+→ Dog extends Animal → Dog gets fly() method → makes no sense
+→ Tight coupling — parent changes, child breaks
+→ Violates LSP if subclass can't replace parent
+
+Why composition is better:
+→ Take only what you need
+→ Each piece has one job
+→ Easy to swap — change the field, not the hierarchy
+
+How to recognize in code:
+extends → ask "is this really is-a?"
+field inside a class → composition, normal and good
+
+Real world:
+Spring Services — UserService has-a UserRepository, has-a EmailService
+Rakuten — ShopSearchService has-a Validator, has-a Formatter, has-a Repository
+None of these extend each other — all composition
+
+Connection to SOLID:
+Inheritance misuse → LSP violation
+Composition → naturally supports SRP and OCP
+
+Interview tip:
+"Favor composition over inheritance — inheritance creates tight coupling.
+With composition, you include only what you need and swap easily."
+
+The question I ask myself:
+"Is this truly is-a, or is it has-a?"
++ is-a → inheritance OK (Dog is an Animal ✅)
++ has-a → composition (Car has a Motor, not Car is a Motor ✅)
