@@ -84,3 +84,48 @@ The question I ask myself:
 "Will I mostly read by index, or mostly add/remove from ends?"
 + Mostly read → ArrayList
 + Mostly add/remove from head/tail → LinkedList (as Deque)
+
+## ConcurrentHashMap — Thread Safety
+
+Problem:
+HashMap is not thread-safe.
+Multiple threads writing simultaneously → race condition → data corruption.
+
+Three options:
+1. HashMap → fastest, single-threaded only, NOT thread-safe
+2. SynchronizedMap → locks entire map → only one thread at a time → slow
+3. ConcurrentHashMap → locks only the bucket, not the entire map → fast + safe
+
+How ConcurrentHashMap works:
+Thread 1 writes to bucket 2 → only bucket 2 locked
+Thread 2 writes to bucket 7 → continues without waiting
+→ Parallel writes possible → much faster than SynchronizedMap
+
+Java 7: Segment locking (16 segments)
+Java 8: Node locking — each bucket has its own lock → more granular → faster
+
+Hashtable — legacy, never use:
+All methods synchronized → entire map locked → very slow
+Doesn't accept null key/value
+Replaced by ConcurrentHashMap
+
+Trade-offs:
++ Thread-safe, parallel reads/writes
++ Much faster than SynchronizedMap under contention
+- Slightly more memory than HashMap
+- Still slower than HashMap in single-thread
+
+Real world:
+Uber → Map<driverId, Location> → ConcurrentHashMap
+thousands of drivers updating location simultaneously
+Netflix → Map<userId, Session> → ConcurrentHashMap
+millions of concurrent users
+
+Rakuten connection:
+URL Shortener — ConcurrentHashMap used
+Multiple threads generating short URLs simultaneously → no data corruption
+
+The question I ask myself:
+"Will multiple threads access this map?"
++ Yes → ConcurrentHashMap, always
++ No → HashMap, faster
