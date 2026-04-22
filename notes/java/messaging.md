@@ -38,3 +38,58 @@ failover:(tcp://server1:61616, tcp://server2:61616)
 
 If server1 goes down → automatically switch to server2
 If both down → messages wait → processed when connection restored
+
+## Retry Topic & Dead Letter Queue (DLQ)
+
+Problem:
+Consumer gets a message → processing fails → what now?
+Infinite retry → system stuck → other messages not processed
+
+Solution: Retry with limit + DLQ
+
+Retry strategy:
+Attempt 1 → fail → wait 30s → retry
+Attempt 2 → fail → wait 60s → retry  
+Attempt 3 → fail → wait 120s → retry
+Still failing → send to DLQ
+
+Why increasing wait time? (Exponential backoff)
+→ Give the downstream service time to recover
+→ Don't hammer a sick service immediately
+
+Dead Letter Queue (DLQ):
+→ Graveyard for messages that couldn't be processed
+→ Alert sent to developers
+→ Logs written — which message, which error, how many retries
+→ Developer investigates — bug fix or manual reprocessing
+→ Never silently discard a failed message
+
+Kafka retry topic pattern (no built-in DLQ):
+payment.debited          → normal topic
+payment.debited.retry-1  → first retry, wait 30s
+payment.debited.retry-2  → second retry, wait 60s
+payment.debited.retry-3  → third retry, wait 120s
+payment.debited.dlq      → dead letter queue
+
+Poison message:
+Message that can never be processed — corrupt data, null field, wrong format
+Consumer crashes immediately, can't even retry
+Solution: wrap in try-catch → if unparseable → skip retries → send directly to DLQ
+
+Rakuten connection:
+ActiveMQ had built-in DLQ — ActiveMQ.DLQ
+monitor_queue script was watching it
+If messages piled up → alarm triggered
+
+Real world:
+Uber → retry + DLQ for every critical topic
+Netflix → video encoding failures → DLQ → team notified
+Revolut → payment event in DLQ → compliance team investigates
+DLQ messages in fintech = potential lost money → critical
+
+The question I ask myself:
+"What happens if this message can never be processed?"
+→ Always have a DLQ
+→ Always alert on DLQ messages
+→ Never silently discard
+
