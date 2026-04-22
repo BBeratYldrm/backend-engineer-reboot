@@ -76,3 +76,55 @@ The question I ask myself:
 → Always implement graceful shutdown
 → Always configure liveness + readiness probes
 → Always use rolling update strategy
+
+## Docker
+
+Problem: "Works on my machine" — different Java versions, different configs
+Solution: Package app WITH its environment
+
+Dockerfile → recipe for the image
+Image → static template (the recipe)
+Container → running instance (the cake)
+
+FROM openjdk:21
+COPY target/app.jar app.jar
+EXPOSE 8080
+CMD ["java", "-jar", "app.jar"]
+
+docker build → creates image
+docker run   → creates container from image
+
+Docker vs VM:
+Docker: shares OS kernel, lightweight, starts in seconds
+VM: full OS copy, heavy, starts in minutes
+
+## Docker Compose (Local Development)
+
+Run multiple services together locally:
+docker-compose up → app + ActiveMQ + MySQL all start together
+Simulates production environment locally
+
+Rakuten: julie-docker compose → tirebringin + ActiveMQ + MySQL
+
+## Harbor + Kubernetes — Production Flow
+
+Code → docker build → docker push to Harbor → K8s pulls image → Pod runs
+
+Harbor = private image registry (company's own Docker Hub)
+Why not Docker Hub? → Company code would be public ❌
+
+K8s deployment YAML:
+image: harbor.rakuten.com/tirebringin/front:v1.2.3
+K8s pulls this image from Harbor → creates pod → app runs
+
+K8s key concepts:
+Pod        → smallest unit, 1+ containers
+Deployment → "run 3 pods, restart if one crashes"
+Service    → load balancing, how to reach pods
+Namespace  → isolation — carwash ns, autoparts ns
+
+Rakuten:
+Each project had its own namespace
+ci-pod.yaml defined pod spec
+kubectl apply → K8s applies the config
+Jenkins pipeline → build → push to Harbor → kubectl apply
