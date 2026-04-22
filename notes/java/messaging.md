@@ -194,3 +194,45 @@ Real world:
 Instagram → RabbitMQ for notifications
 Zalando → RabbitMQ for order processing
 Most companies → RabbitMQ for simple async tasks, Kafka for event streaming
+
+## Redis + Kafka Together
+
+Problem:
+Redis cache is fast but gets stale when data changes.
+Who invalidates the cache? Service directly? → tight coupling.
+
+Solution: Event-driven cache invalidation via Kafka.
+
+Product Service → updates DB
+→ publishes "product.price.updated" to Kafka
+
+Cache Service listens to Kafka:
+→ receives "product.price.updated"
+→ deletes or updates Redis key
+→ next request gets fresh data
+
+Why this combination:
+Redis alone → fast reads but manual cache invalidation, tight coupling
+Kafka alone → event-driven but slow reads (DB speed)
+Redis + Kafka → fast reads + loosely coupled invalidation ✅
+
+Connection to CQRS:
+This IS the event-driven read model update we discussed in CQRS.
+Write → Kafka event → Redis (read model) updated
+CQRS + Redis + Kafka = complete read model implementation
+
+Real world:
+Twitter → tweet written → Kafka event → Redis timeline updated → fast reads
+Amazon → stock updated → Kafka event → Redis cache invalidated
+Netflix → user preference changed → Kafka → Redis recommendation cache updated
+
+Rakuten connection:
+ShopSearchService fetched shop data on every search.
+With Redis + Kafka:
+Shop updated → Kafka event → Redis cache invalidated
+User searches → served from Redis instantly
+
+The question I ask myself:
+"Does this data change frequently but get read much more than it's written?"
++ Yes → Redis for reads + Kafka for cache invalidation
++ This is the classic read-heavy, write-sometimes pattern
