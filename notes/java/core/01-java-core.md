@@ -39,3 +39,48 @@ Tip: if you know the size upfront → new HashMap<>(initialCapacity) to avoid re
 The question I ask myself:
 "Why did get() return null even though I put the key in?"
 → Almost always: equals() or hashCode() not overridden.
+
+## HashSet — How It Works
+
+Stores unique elements only. No key-value — just keys.
+
+Internally: HashSet is a wrapper around HashMap.
+add("Berat") → map.put("Berat", PRESENT) — value is always a dummy object.
+Uniqueness guaranteed because HashMap doesn't allow duplicate keys.
+
+When to use:
++ "Does this element exist?" → contains() → O(1)
++ Need unique collection, no duplicates
++ Visited URLs, processed IDs, seen elements
+
+HashSet vs HashMap:
+HashSet → just keys, uniqueness, membership check
+HashMap → key-value pairs, lookup by key
+
+The question I ask myself:
+"Do I need to store a value, or just check existence?"
++ Just existence → HashSet
++ Need associated value → HashMap
+
+## ArrayList vs LinkedList
+
+ArrayList:
+→ Dynamic array — elements stored contiguously in memory
+→ Read by index: O(1) — direct access
+→ Add/remove middle: O(n) — shift required
+→ CPU cache friendly — fast in practice
+
+LinkedList:
+→ Nodes connected by pointers
+→ Read by index: O(n) — must traverse
+→ Add/remove head/tail: O(1)
+→ Add/remove middle: O(n) traverse + O(1) pointer change = O(n)
+→ Extra memory per node (pointer overhead)
+
+In practice: almost always use ArrayList.
+LinkedList only when: frequent head/tail operations, used as Queue/Deque.
+
+The question I ask myself:
+"Will I mostly read by index, or mostly add/remove from ends?"
++ Mostly read → ArrayList
++ Mostly add/remove from head/tail → LinkedList (as Deque)
