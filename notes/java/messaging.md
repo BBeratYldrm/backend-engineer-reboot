@@ -146,3 +146,51 @@ Without outbox: crash between DB save and MQ send → lost email notification
 The question I ask myself:
 "What if my service crashes after DB commit but before sending the event?"
 → If the answer is 'data inconsistency' → use Outbox Pattern
+
+## RabbitMQ
+
+Traditional message broker — like ActiveMQ but more modern and widely used.
+
+Key difference from Kafka:
+RabbitMQ → message delivered → deleted (fire and forget)
+Kafka    → message delivered → stored (event log)
+
+RabbitMQ's killer feature — Exchange types:
+Direct  → exact routing key match → goes to specific queue
+Topic   → pattern matching → "payment.*" matches payment.success, payment.failed
+Fanout  → broadcast → send to ALL queues → system-wide notifications
+
+When to use RabbitMQ:
++ Complex routing needed
++ Message must be processed immediately, no need to store
++ Task queue — distribute work across workers
++ Low latency required
+  → Email, SMS, notifications, background jobs
+
+When to use Kafka instead:
++ High throughput (millions/sec)
++ Need event history — replay past events
++ Multiple consumers reading same event
++ Audit log, analytics, event sourcing
+  → Financial transactions, user behavior tracking
+
+Trade-offs:
+RabbitMQ:
++ Easy setup, good UI, complex routing, low latency
+- Messages lost after delivery — no replay
+- Doesn't scale as well as Kafka
+
+Kafka:
++ High throughput, message retention, replay
+- More complex setup
+- Ordering requires careful partition key design
+
+Rakuten connection:
+Email/SMS via ActiveMQ → correct choice ✅
+RabbitMQ would work the same way
+If analytics were needed → Kafka would be better
+
+Real world:
+Instagram → RabbitMQ for notifications
+Zalando → RabbitMQ for order processing
+Most companies → RabbitMQ for simple async tasks, Kafka for event streaming
