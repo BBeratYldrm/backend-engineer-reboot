@@ -93,3 +93,56 @@ The question I ask myself:
 → Always alert on DLQ messages
 → Never silently discard
 
+## Outbox Pattern
+
+Problem:
+DB commit → then send Kafka event
+If service crashes between these two → DB has record, Kafka has no event
+Distributed transaction impossible — DB and Kafka can't share @Transactional
+
+Solution: Write to outbox table in the SAME transaction as the main operation.
+
+@Transactional
+public void processPayment(Payment payment) {
+paymentRepository.save(payment);           // main record
+outboxRepository.save(new OutboxEvent(...)); // outbox record
+// both commit or both rollback — atomically
+}
+
+Separate outbox reader sends events to Kafka.
+
+Why it works:
++ DB commit → outbox commit → event eventually sent ✅
++ DB rollback → outbox rollback → no event sent ✅
++ Service crashes after commit → outbox reader still sends ✅
+
+Two ways to read outbox:
+1. Polling: scan outbox table every 1s, send PENDING events to Kafka
+   + Simple
+   - Extra DB load
+
+2. CDC (Change Data Capture) — Debezium:
+   Watch DB changes → auto send to Kafka when new outbox row appears
+   + No extra DB load, real-time
+   - Extra infrastructure (Debezium, Kafka Connect)
+
+Outbox table structure:
+id, event_type, aggregate_id, payload, status, created_at
+status: PENDING → SENT
+
+Real world:
+Revolut → every financial operation uses outbox
+"at least once event delivery" guarantee
+Uber → trip events via outbox, "ride started" never lost
+Amazon → order events atomically saved with order record
+
+Rakuten connection:
+Monolith — this problem didn't exist (same DB, same transaction)
+If it were microservices:
+ReserveSaveDataService → save reservation + outbox record
+Outbox reader → send to ActiveMQ
+Without outbox: crash between DB save and MQ send → lost email notification
+
+The question I ask myself:
+"What if my service crashes after DB commit but before sending the event?"
+→ If the answer is 'data inconsistency' → use Outbox Pattern
