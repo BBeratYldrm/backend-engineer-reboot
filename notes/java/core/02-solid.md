@@ -202,3 +202,73 @@ Rakuten connection:
 ShopSearchService depends on PartsShopRepository (interface), not the concrete class.
 Spring injects the real implementation.
 In tests, a mock could be injected instead — no code change need
+
+## Stream API
+
+Pipeline of 3 parts:
+1. Source → where data comes from (list, array, set)
+2. Intermediate → what to do (lazy — nothing runs until terminal)
+3. Terminal → how to finish (triggers execution)
+
+list.stream()           // source
+.filter(...)        // intermediate
+.map(...)           // intermediate
+.toList();          // terminal — execution starts here
+
+Lazy evaluation:
+Intermediate operations don't execute without a terminal operation.
+JVM can optimize the pipeline before running.
+
+Short-circuit:
+Each element passes through the full pipeline one by one.
+Not: all elements through filter, then all through map.
+But: element 1 → filter → map, element 2 → filter → map...
+
+Most used operations:
+Intermediate: filter, map, flatMap, distinct, sorted, limit, skip
+Terminal: toList, collect, count, findFirst, anyMatch, allMatch, reduce
+
+flatMap:
+Flattens nested structures.
+List<List<T>> → flatMap → List<T>
+Optional → flatMap(Optional::stream) → empty optionals dropped automatically
+
+Parallel Stream:
+.parallelStream() → splits list across multiple CPU cores → faster for large lists
+
+Trade-offs:
++ Large lists (100k+) → significant speedup
+- Small lists → overhead worse than benefit
+- No ordering guarantee
+- Not safe with stateful operations or shared mutable state
+
+Primitive Streams — avoid boxing:
+int/long/double → boxing to Integer/Long/Double → object creation → GC pressure
+IntStream, LongStream, DoubleStream → no boxing → faster for numeric operations
+
+int vs Integer:
+int → primitive, stack, cannot be null, fast
+Integer → object, heap, can be null, slower
+Use Integer when: null needed, used in collections (List<Integer>)
+Use int when: calculations, method variables
+
+Real world:
+Rakuten — ShopSearchService:
+shops.stream()
+.map(shop -> createShopSearchItem(shop, zipCode))
+.sorted(Comparator.comparingDouble(ShopSearchItem::getDistance))
+.toList()
+
+Netflix → filter highly rated movies → map to genre → distinct genres
+Amazon → filter pending orders → sort by date → limit 100 → process
+
+Interview tips:
+"Streams are lazy — nothing runs without a terminal operation."
+"Parallel streams aren't always faster — benchmark first."
+"Use IntStream for numeric operations to avoid boxing overhead."
+
+The question I ask myself:
+"Am I transforming a collection?" → Stream
+"Do I need parallel processing on large data?" → parallelStream (carefully)
+"Am I doing numeric aggregation?" → IntStream/LongStream
+
