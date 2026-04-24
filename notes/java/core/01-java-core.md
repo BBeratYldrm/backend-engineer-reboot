@@ -406,3 +406,79 @@ The question I ask myself:
 + Yes → Optional return type
   "Is this a field or parameter?"
 + Yes → don't use Optional, use null or empty string
+
+## Functional Interfaces
+
+A functional interface has exactly one abstract method.
+Lambda = short way to implement a functional interface.
+
+4 core functional interfaces:
+
+Predicate<T> → takes T, returns boolean (test something)
+Predicate<String> longName = s -> s.length() > 5;
+longName.test("Berat"); // false
+→ Used in: stream.filter()
+
+Function<T, R> → takes T, returns R (transform something)
+Function<String, Integer> length = s -> s.length();
+length.apply("Berat"); // 5
+→ Used in: stream.map()
+
+Supplier<T> → takes nothing, returns T (produce something)
+Supplier<String> greeting = () -> "Hello!";
+greeting.get(); // "Hello!"
+→ Used in: optional.orElseThrow(() -> new Exception())
+
+Consumer<T> → takes T, returns nothing (consume something)
+Consumer<String> print = s -> System.out.println(s);
+print.accept("Berat");
+→ Used in: stream.forEach()
+
+Method reference — shorthand for lambda:
+s -> s.toUpperCase()  ==  String::toUpperCase
+s -> System.out.println(s)  ==  System.out::println
+this::createTireSizeSafely  ==  s -> this.createTireSizeSafely(s)
+
+@FunctionalInterface annotation:
+Marks an interface as functional.
+Compiler error if you add a second abstract method — safe contract.
+
+@FunctionalInterface
+public interface Calculator {
+int calculate(int a, int b);
+}
+Calculator add = (a, b) -> a + b;
+Calculator multiply = (a, b) -> a * b;
+
+Side-effect isolation:
+// WRONG — mutable shared state in lambda:
+List<String> results = new ArrayList<>();
+list.stream().forEach(s -> results.add(s)); // not thread-safe ❌
+
+// CORRECT — no side effects:
+List<String> results = list.stream().toList(); // ✅
+
+Rakuten connection:
+.map(this::createTireSizeSafely)  → Function
+.flatMap(Optional::stream)         → Function  
+.filter(shop -> shop.isActive())   → Predicate
+.forEach(s -> process(s))          → Consumer
+optional.orElseThrow(() -> new ValidationException()) → Supplier
+
+Real world:
+Spring @Bean methods → Supplier pattern
+Stream pipelines → combination of all four
+Event handlers → Consumer pattern
+
+Interview tip:
+"The four core functional interfaces cover every use case:
+test something → Predicate
+transform something → Function
+produce something → Supplier
+consume something → Consumer
+Lambdas should be side-effect free — especially in parallel streams."
+
+The question I ask myself:
+"Does this lambda test, transform, produce, or consume?"
+→ That tells me which functional interface I'm using.
+
