@@ -237,5 +237,53 @@ With composition, you include only what you need and swap easily."
 
 The question I ask myself:
 "Is this truly is-a, or is it has-a?"
-+ is-a → inheritance OK (Dog is an Animal ✅)
-+ has-a → composition (Car has a Motor, not Car is a Motor ✅)
++ is-a → inheritance OK (Dog is an Animal )
++ has-a → composition (Car has a Motor, not Car is a Motor )
+
+## Immutability
+
+An object is immutable if its state cannot change after creation.
+
+4 rules to make a class immutable:
+1. Make the class final — no subclassing
+2. All fields private + final
+3. Set values only through constructor
+4. No setters — only getters
+
+public final class Money {
+private final double amount;
+private final String currency;
+
+    public Money(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+    
+    public double getAmount() { return amount; }
+    
+    // Need a change? Return new object:
+    public Money add(double extra) {
+        return new Money(this.amount + extra, this.currency);
+    }
+}
+
+Why immutable?
+1. Thread-safe by default — can't be modified → no race condition
+2. Safe as HashMap keys — hashCode never changes
+3. Security — config values, passwords can't be tampered with
+
+Java built-in immutables:
+String, Integer, Long, Double, LocalDate, BigDecimal
+
+Real world:
+Revolut — Money object immutable, every operation returns new Money
+Rakuten — DB config loaded once, never changes
+Spring — @Value injected config fields should be final
+
+Interview tip:
+"Immutable objects are inherently thread-safe.
+Since they can't be modified, no synchronization needed.
+This is why String is immutable and why Value Objects in financial
+systems should be immutable."
+
+The question I ask mys
