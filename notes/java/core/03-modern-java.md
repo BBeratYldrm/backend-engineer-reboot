@@ -57,3 +57,44 @@ The question I ask myself:
 "Is the type obvious from the right side of the assignment?"
 + Yes → var is fine
 + No → write the type explicitly
+## Sealed Classes
+
+Restricts which classes can extend or implement a type.
+"Only these specific classes are allowed."
+
+public sealed class Shape permits Circle, Rectangle, Triangle {}
+public final class Circle extends Shape { ... }
+// No one else can extend Shape ❌
+
+Why useful:
+→ Controlled, closed hierarchy
+→ Compiler knows all possible subtypes
+→ No else needed in switch — compiler verifies all cases covered
+→ Eliminates "unknown subtype" bugs
+
+With pattern matching:
+switch (shape) {
+case Circle c    → Math.PI * c.radius() * c.radius()
+case Rectangle r → r.width() * r.height()
+case Triangle t  → 0.5 * t.base() * t.height()
+// no default needed — compiler knows all cases
+}
+
+Real world:
+Payment results → Success, Failure, Pending — sealed interface
+Order status → Created, Confirmed, Shipped, Delivered — sealed class
+API responses → sealed with all possible response types
+
+Rakuten connection:
+Reservation status could be modeled as sealed class —
+only known statuses allowed, compiler enforces completeness
+
+Interview tip:
+"Sealed classes give you algebraic data types in Java —
+you know exactly what subtypes exist.
+Combined with pattern matching, switch becomes exhaustive and safe."
+
+The question I ask myself:
+"Is this a closed set of types that will never change?"
++ Yes → sealed class/interface
++ No → regular inheritance
