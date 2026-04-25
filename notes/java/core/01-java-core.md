@@ -407,6 +407,76 @@ The question I ask myself:
   "Is this a field or parameter?"
 + Yes → don't use Optional, use null or empty string
 
+I want to convert:
+→ map() → Stream<T> → Stream<R>
+→ mapToInt() → Stream<T> → IntStream (for numerical operations)
+→ mapToLong() → Stream<T> → LongStream
+→ mapToDouble() → Stream<T> → DoubleStream
+
+I want to filter:
+→ filter() → conditional filtering
+
+I want to remove duplicates:
+→ distinct()
+
+I want to count:
+→ count()
+
+I want to sum:
+→ mapToInt().sum()
+
+I want an average:
+→ mapToInt().average().orElse(0.0)
+
+Largest/smallest:
+→ mapToInt().max()
+
+→ mapToInt().min()
+
+To add to a list:
+→ toList()
+
+## Stream — Quick Reference
+
+Sorting:
+.sorted()                                        → alphabetical
+.sorted(Comparator.comparingInt(String::length)) → by length
+.sorted(Comparator.reverseOrder())               → reverse alphabetical
+.sorted(Comparator.comparingInt(String::length).reversed()) → longest first
+
+Finding max/min element (not the value):
+.max(Comparator.comparingInt(String::length))    → longest String → Optional<String>
+.min(Comparator.comparingInt(String::length))    → shortest String → Optional<String>
+
+Matching:
+.anyMatch(s -> s.equals("Berat"))  → at least one matches → boolean
+.allMatch(s -> s.length() > 3)     → all match → boolean
+.noneMatch(s -> s.isEmpty())       → none match → boolean
+
+Joining:
+.collect(Collectors.joining(", "))           → "Berat, Ali, Ayşe"
+.collect(Collectors.joining(", ", "[", "]")) → "[Berat, Ali, Ayşe]"
+
+Common mistakes:
+s.length    → s.length()   — it's a method, not a field
+!==         → !=           — not a valid operator
+String::toUpperCase   — no parentheses in method reference
+String::toUpperCase()  — no parentheses allowed
+
+Even/odd:
+n % 2 == 0  → even
+n % 2 != 0  → odd
+n % 3 == 0  → divisible by 3
+
+To find a single element:
+→ findFirst()
+→ findAny()
+
+Does it all match:
+→ allMatch()
+→ anyMatch()
+→ noneMatch()
+
 ## Functional Interfaces
 
 A functional interface has exactly one abstract method.
@@ -453,10 +523,10 @@ Calculator multiply = (a, b) -> a * b;
 Side-effect isolation:
 // WRONG — mutable shared state in lambda:
 List<String> results = new ArrayList<>();
-list.stream().forEach(s -> results.add(s)); // not thread-safe ❌
+list.stream().forEach(s -> results.add(s)); // not thread-safe 
 
 // CORRECT — no side effects:
-List<String> results = list.stream().toList(); // ✅
+List<String> results = list.stream().toList(); // 
 
 Rakuten connection:
 .map(this::createTireSizeSafely)  → Function
