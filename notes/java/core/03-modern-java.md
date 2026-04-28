@@ -185,3 +185,57 @@ The question I ask myself:
 "Is this IO-bound or CPU-bound?"
 + IO-bound → Virtual Threads → massive scalability gain
 + CPU-bound → Virtual Threads won't help, use ForkJoinPool
+
+## Structured Concurrency (Java 21)
+
+Problem:
+Multiple independent tasks needed for one response.
+Sequential: 200ms + 300ms + 250ms = 750ms
+Parallel: max(200ms, 300ms, 250ms) = 300ms — 2.5x faster
+
+Old way — CompletableFuture:
+Works but complex error handling, hard to cancel, messy stack traces.
+If one fails → others keep running → resource waste.
+
+Structured Concurrency solution:
+try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+var userTask  = scope.fork(() -> userService.getUser(id));
+var orderTask = scope.fork(() -> orderService.getOrders(id));
+var payTask   = scope.fork(() -> paymentService.get(id));
+
+    scope.join();
+    scope.throwIfFailed();
+    
+    return new Dashboard(userTask.get(), orderTask.get(), payTask.get());
+}
+
+ShutdownOnFailure:
+One task fails → all others automatically cancelled → no resource waste
+
+try-with-resources:
+Block exits → all child tasks guaranteed to finish → no leaks
+
+Why better than CompletableFuture:
++ Clear parent-child relationship between threads
++ Automatic cancellation on failure
++ Clean stack traces — easy to debug
++ Code reads top-to-bottom — no callback chains
+
+Rakuten connection:
+ShopSearchService fetched ZipCode + PartsShops sequentially.
+With Structured Concurrency → parallel → 2x faster.
+
+Real world:
+Dashboard APIs — user + orders + payments in parallel
+Search results — multiple data sources combined
+Revolut — balance + transactions + limits fetched simultaneously
+
+Interview tip:
+"Structured Concurrency makes parallel tasks safe and readable.
+If one subtask fails, all siblings are cancelled automatically.
+It's the structured programming equivalent for concurrent code."
+
+The question I ask myself:
+"Are these tasks independent? Can they run in parallel?"
++ Yes → Structured Concurrency
++ No (one depends on other's result) → sequential is correct
