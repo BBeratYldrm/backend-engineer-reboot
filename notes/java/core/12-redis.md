@@ -17,12 +17,19 @@ Restart → RAM cleared → data gone (unless persistence configured with RDB/AO
 Kubernetes: Redis runs as a separate pod.
 Application pods connect to Redis pod over internal network.
 
+Real world usage:
+Twitter    → timeline cache, session management, rate limiting
+YouTube    → video view counters, recommendation cache
+GitHub     → API rate limiting (X-RateLimit-Remaining header comes from Redis)
+Stripe     → idempotency keys, rate limiting
+Rakuten    → session management, product cache, rate limiting
+
 Data structures — each solves a different problem:
 String     → cache, counter, session, distributed lock
 Hash       → object storage (user profile fields)
 List       → queue, feed, recent items
 Set        → unique members (online users, tags)
-Sorted Set → leaderboard, rate limiting with scores
+Sorted Set → leaderboard, sliding window rate limiting
 Stream     → persistent event log, consumer groups
 
 ## Cache-Aside (Lazy Loading)
@@ -122,6 +129,7 @@ Trade-offs:
 - Data that is never read still goes into cache → memory waste
 
 When to use: read-heavy systems where cache freshness is critical.
+Real world: leaderboards, product catalogs, config data.
 
 ## Write-Behind (Write-Back)
 
@@ -138,7 +146,7 @@ Trade-offs:
 - Complex to implement reliably
 
 When to use: data loss is tolerable.
-Examples: social media like counts, view counters, analytics events.
+Examples: social media like counts, YouTube view counters, analytics events.
 
 ## Strategy Comparison
 
@@ -148,17 +156,26 @@ Write-Behind:  cache first, DB async → fastest writes, data loss risk
 
 ## Rate Limiting
 
-Prevent users from exceeding request limits.
-Redis Sorted Set or simple counter approach.
+Two layers — always use both together:
 
-Counter approach:
+Layer 1 — Infrastructure (Nginx / API Gateway):
+→ IP-based, coarse filter, bot protection
+→ Config file, no application code
+→ Rakuten: Apache/Nginx config, IP blocking, path-based rules
+
+Layer 2 — Application (Redis):
+→ User-based, plan-based, granular
+→ Free: 100 req/min, Premium: 1000 req/min, Admin: unlimited
+→ GitHub X-RateLimit-Remaining header comes from Redis
+
+Redis counter approach:
 public boolean isAllowed(String userId) {
 String key = "rate:" + userId;
 long current = redis.incr(key);
 if (current == 1) {
 redis.expire(key, 60); // start 60-second window on first request
 }
-return current <= 100; // max 100 requests per 60 seconds
+return current <= 100;
 }
 
 Problem: incr and expire are two separate commands.
@@ -174,11 +191,40 @@ return current
 Lua script runs atomically — either both commands execute or neither.
 No partial state possible.
 
+Fixed Window problem:
+Window: 00:00 → 01:00 (60 seconds), limit: 100 requests
+
+User sends 100 requests at 00:59 → limit reached
+Window resets at 01:00 → user sends 100 more requests
+Result: 200 requests passed in 2 seconds — system allowed it
+
+Window reset creates a burst opportunity.
+
+Sliding Window solution:
+Window continuously moves. "How many requests in the last 60 seconds?"
+Checked at every moment — no reset burst possible.
+
+Redis Sorted Set implementation:
+// Each request → add timestamp to Sorted Set
+redis.zadd("rate:" + userId, now, UUID.randomUUID().toString());
+// Remove entries older than 60 seconds
+redis.zremrangeByScore("rate:" + userId, 0, now - 60000);
+// Remaining count = requests in last 60 seconds
+long count = redis.zcard("rate:" + userId);
+return count <= 100;
+
+Fixed Window vs Sliding Window:
+Fixed Window:   simple, memory efficient, burst vulnerability at window reset
+Sliding Window: no burst, fairer, higher memory usage per user
+
+Most systems: fixed window is sufficient.
+API gateways, critical rate limiting: sliding window — GitHub, Stripe use it.
+
 Token Bucket vs Leaky Bucket:
-Token Bucket → burst allowed. Accumulate tokens, spend all at once.
-User-friendly, allows short bursts.
-Leaky Bucket → fixed rate. Burst absorbed, processed at constant speed.
-Backend protection, predictable load.
+Token Bucket → burst allowed, accumulate tokens, spend all at once
+user-friendly, allows short bursts
+Leaky Bucket → fixed rate, burst absorbed, processed at constant speed
+backend protection, predictable load
 
 Trade-offs:
 Token Bucket: better UX, burst possible → backend sees spikes
@@ -188,15 +234,21 @@ Leaky Bucket: smooth backend load → user experience less flexible
 
 Prevent multiple application instances from executing the same operation simultaneously.
 
-String lockKey = "lock:process:invoice";
-String lockValue = UUID.randomUUID().toString(); // unique per process
+Problem:
+3 Kubernetes pods running the same application.
+Scheduled job fires at 09:00 — daily report generation.
+All 3 pods trigger at the same time → 3 duplicate reports sent.
+
+Solution — Redis distributed lock:
+String lockKey = "lock:daily-report";
+String lockValue = UUID.randomUUID().toString(); // unique per instance
 
 boolean locked = redis.set(lockKey, lockValue,
-SetParams.setParams().nx().ex(30));
+SetParams.setParams().nx().ex(30)); // NX: only if not exists, EX: expire 30s
 
 if (locked) {
 try {
-processInvoice();
+generateDailyReport(); // only one instance runs this
 } finally {
 if (lockValue.equals(redis.get(lockKey))) {
 redis.delete(lockKey); // only delete own lock
@@ -205,25 +257,43 @@ redis.delete(lockKey); // only delete own lock
 }
 
 Why unique value?
-Process A locks, operation takes long, lock expires (30s passed).
-Process B locks.
-Process A finishes, tries to delete lock — but it's B's lock now.
+Instance A locks, job takes long, lock expires (30s passed).
+Instance B locks.
+Instance A finishes, tries to delete lock — but it is B's lock now.
 Unique value check → A cannot delete B's lock. Safe.
 
+Why NX (set if not exists)?
+All 3 instances try to set the key simultaneously.
+NX is atomic — only one succeeds. Others get null back → skip the job.
+
+When to use distributed lock:
+→ Scheduled job that must run on exactly one instance
+→ Inventory reservation — prevent overselling
+→ Invoice generation — must not duplicate
+→ Cache population — thundering herd protection
+
 Redlock — multi-node distributed lock:
-Single Redis node fails → lock lost → two processes enter critical section.
-Redlock: write to 5 Redis nodes, lock acquired if 3+ accept.
+Single Redis node fails → lock lost → two instances enter critical section.
+Redlock: write to 5 Redis nodes, lock acquired if 3+ accept (quorum).
+
+Flow:
+Instance A → tries to lock on node 1, 2, 3, 4, 5
+→ 3 accept → lock acquired
+→ job runs
+
+Instance B → tries same
+→ only 2 accept (3 already locked) → lock not acquired
+→ skips job
 
 Trade-offs:
 + More reliable than single node
-- Still has edge cases: network partition, clock skew
-- Martin Kleppmann vs Redis creator (Antirez) — famous debate
+- Still has edge cases: network partition, clock skew between nodes
+- Martin Kleppmann vs Redis creator (Antirez) — famous debate in distributed systems
 - For truly critical systems: ZooKeeper or etcd more reliable
 
-When to use distributed lock:
-Scheduled job that must run on only one instance.
-Inventory reservation — prevent overselling.
-Invoice generation — must not duplicate.
+Real world:
+Uber → distributed lock for driver assignment — one driver, one ride
+Stripe → idempotency keys prevent duplicate payment processing
 
 ## Pub/Sub
 
@@ -246,12 +316,12 @@ Trade-offs:
 - No replay
 
 Redis Pub/Sub vs Kafka:
-Pub/Sub → real-time notifications, online users, low stakes
+Pub/Sub → real-time notifications, online users, low stakes, cache invalidation signals
 Kafka   → event sourcing, guaranteed delivery, replay needed, audit log
 
 ## Redis Streams
 
-Persistent Pub/Sub with consumer groups — Redis's answer to Kafka.
+Persistent Pub/Sub with consumer groups — Redis's answer to Kafka for lighter workloads.
 
 // Produce:
 redis.xadd("reservations", "*", "shopId", "123", "userId", "456");
@@ -265,7 +335,9 @@ StreamOffset.create("reservations", ReadOffset.lastConsumed())
 );
 
 vs Pub/Sub: messages persisted, consumer groups, ACK mechanism.
-vs Kafka: Redis in memory (faster, costlier), Kafka on disk (cheaper, scalable).
+vs Kafka:
+Redis Streams → in-memory, faster, costlier storage, simpler setup
+Kafka         → disk-based, cheaper at scale, replay TB of data, battle-tested
 
 ## Interview Checklist
 → What is Redis? → in-memory data store, separate process, TCP 6379, RAM-based
@@ -275,6 +347,10 @@ vs Kafka: Redis in memory (faster, costlier), Kafka on disk (cheaper, scalable).
 → TTL vs active invalidation? → passive expiry vs delete on change, use both
 → Write-Through vs Write-Behind? → both sync vs cache first async DB, data loss risk
 → Why Lua script for rate limiting? → atomicity, two commands as one operation
-→ Distributed lock unique value? → prevent process from deleting another process's lock
+→ Fixed vs sliding window? → burst at reset vs continuous window, sliding fairer
+→ Two layers of rate limiting? → Nginx coarse filter + Redis granular per user
+→ Distributed lock unique value? → prevent instance from deleting another instance's lock
+→ Why NX is atomic? → only one instance wins even with simultaneous attempts
+→ Redlock? → quorum across 5 nodes, more reliable but edge cases remain
 → Redis Pub/Sub vs Kafka? → fire and forget vs guaranteed delivery and replay
 → Redis Streams vs Kafka? → in-memory fast vs disk-based scalable
