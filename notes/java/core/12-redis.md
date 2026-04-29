@@ -245,4 +245,36 @@ Trade-offs:
 - No delivery guarantee
 - No replay
 
-Redis Pub/Sub vs Kafka
+Redis Pub/Sub vs Kafka:
+Pub/Sub → real-time notifications, online users, low stakes
+Kafka   → event sourcing, guaranteed delivery, replay needed, audit log
+
+## Redis Streams
+
+Persistent Pub/Sub with consumer groups — Redis's answer to Kafka.
+
+// Produce:
+redis.xadd("reservations", "*", "shopId", "123", "userId", "456");
+
+// Consume with consumer group:
+List<MapRecord> messages = redis.xreadgroup(
+GroupName.of("notification-group"),
+Consumer.from("notification-group", "consumer-1"),
+StreamReadOptions.empty().count(10),
+StreamOffset.create("reservations", ReadOffset.lastConsumed())
+);
+
+vs Pub/Sub: messages persisted, consumer groups, ACK mechanism.
+vs Kafka: Redis in memory (faster, costlier), Kafka on disk (cheaper, scalable).
+
+## Interview Checklist
+→ What is Redis? → in-memory data store, separate process, TCP 6379, RAM-based
+→ Cache-Aside flow? → check cache → miss → lock → DB → write cache → delete lock
+→ Thundering herd? → cache expires, many requests hit DB simultaneously
+→ Fix for thundering herd? → distributed lock, only one goes to DB, others poll
+→ TTL vs active invalidation? → passive expiry vs delete on change, use both
+→ Write-Through vs Write-Behind? → both sync vs cache first async DB, data loss risk
+→ Why Lua script for rate limiting? → atomicity, two commands as one operation
+→ Distributed lock unique value? → prevent process from deleting another process's lock
+→ Redis Pub/Sub vs Kafka? → fire and forget vs guaranteed delivery and replay
+→ Redis Streams vs Kafka? → in-memory fast vs disk-based scalable
