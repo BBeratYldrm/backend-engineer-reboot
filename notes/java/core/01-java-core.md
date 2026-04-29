@@ -237,8 +237,8 @@ With composition, you include only what you need and swap easily."
 
 The question I ask myself:
 "Is this truly is-a, or is it has-a?"
-+ is-a → inheritance OK (Dog is an Animal )
-+ has-a → composition (Car has a Motor, not Car is a Motor )
++ is-a → inheritance OK (Dog is an Animal)
++ has-a → composition (Car has a Motor, not Car is a Motor)
 
 ## Immutability
 
@@ -258,9 +258,9 @@ private final String currency;
         this.amount = amount;
         this.currency = currency;
     }
-    
+
     public double getAmount() { return amount; }
-    
+
     // Need a change? Return new object:
     public Money add(double extra) {
         return new Money(this.amount + extra, this.currency);
@@ -275,21 +275,186 @@ Why immutable?
 Java built-in immutables:
 String, Integer, Long, Double, LocalDate, BigDecimal
 
+Defensive copy — the hidden rule:
+If a field is a mutable object (List, Date, array), just storing the reference is not enough.
+External code can still mutate the object through that reference → immutability broken.
+
+// WRONG — mutable field exposed:
+public final class Schedule {
+private final List<String> slots;
+
+    public Schedule(List<String> slots) {
+        this.slots = slots; // caller still holds reference → can mutate
+    }
+
+    public List<String> getSlots() {
+        return slots; // returns internal reference → caller can mutate
+    }
+}
+
+// CORRECT — defensive copy:
+public final class Schedule {
+private final List<String> slots;
+
+    public Schedule(List<String> slots) {
+        this.slots = new ArrayList<>(slots); // copy in constructor
+    }
+
+    public List<String> getSlots() {
+        return Collections.unmodifiableList(slots); // copy on return
+    }
+}
+
+Two places to apply defensive copy:
+→ Constructor: copy mutable input, don't trust the caller
+→ Getter: return unmodifiable view, don't expose internal state
+
 Real world:
-Revolut — Money object immutable, every operation returns new Money
 Rakuten — DB config loaded once, never changes
+Revolut — Money object immutable, every operation returns new Money
 Spring — @Value injected config fields should be final
 
 Interview tip:
 "Immutable objects are inherently thread-safe.
 Since they can't be modified, no synchronization needed.
-This is why String is immutable and why Value Objects in financial
-systems should be immutable."
+The subtle trap is mutable fields — without defensive copy,
+the 4 rules alone are not enough."
 
 The question I ask myself:
 "Should this object ever change after creation?"
 + No → make it immutable
-+ Yes → be careful with thread safety
+  "Does it have mutable fields?"
++ Yes → apply defensive copy in constructor and getter
+
+## equals() / hashCode() / compareTo()
+
+Three methods that define object identity and ordering.
+All three have contracts — breaking them causes silent, hard-to-find bugs.
+
+---
+
+equals() — logical equality
+
+Default (Object): compares references — same object in memory.
+Override when: two different objects with same data should be "equal."
+
+public class Money {
+private final double amount;
+private final String currency;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Money m)) return false;
+        return amount == m.amount && currency.equals(m.currency);
+    }
+}
+
+equals() contract:
+→ Reflexive: x.equals(x) must be true
+→ Symmetric: x.equals(y) == y.equals(x)
+→ Transitive: if x.equals(y) and y.equals(z) → x.equals(z)
+→ Consistent: same result every time unless object changes
+→ x.equals(null) must return false, never throw
+
+---
+
+hashCode() — bucket address
+
+Rule: if equals() returns true → hashCode() must return same value.
+If you override equals(), you MUST override hashCode(). Always. No exception.
+
+Why?
+HashMap uses hashCode() first to find the bucket, then equals() to find the key.
+If two "equal" objects have different hashCodes → they go to different buckets
+→ get() returns null even though the key "exists."
+
+public class Money {
+@Override
+public int hashCode() {
+return Objects.hash(amount, currency);
+}
+}
+
+The contract ihlali bug:
+class Order {
+private String id;
+// equals() overridden, hashCode() NOT overridden
+}
+
+Order o1 = new Order("123");
+Order o2 = new Order("123");
+
+o1.equals(o2) → true  (custom equals)
+o1.hashCode() != o2.hashCode() → different buckets
+
+Map<Order, String> map = new HashMap<>();
+map.put(o1, "first");
+map.get(o2) → null  // contract broken, bug impossible to trace
+
+---
+
+compareTo() — natural ordering
+
+Used for sorting. Implement Comparable<T> when the class has a natural order.
+
+public class Money implements Comparable<Money> {
+@Override
+public int compareTo(Money other) {
+return Double.compare(this.amount, other.amount);
+}
+}
+
+Return values:
+negative → this < other
+0        → this == other
+positive → this > other
+
+Used by: Collections.sort(), TreeMap, TreeSet, sorted streams.
+
+---
+
+Comparable vs Comparator
+
+Comparable → natural order, defined inside the class (one order only)
+Comparator → external order, defined outside (multiple orderings possible)
+
+// Natural order — inside class:
+class Employee implements Comparable<Employee> {
+public int compareTo(Employee other) {
+return this.name.compareTo(other.name); // alphabetical by default
+}
+}
+
+// Custom order — outside class:
+Comparator<Employee> bySalary = Comparator.comparingInt(Employee::getSalary);
+Comparator<Employee> byAge    = Comparator.comparingInt(Employee::getAge);
+
+list.sort(bySalary);
+list.sort(byAge);
+
+Rakuten connection:
+ShopSearchService — shops sorted by distance:
+.sorted(Comparator.comparingDouble(ShopSearchItem::getDistance))
+→ Comparator used, not Comparable — because distance is not a "natural" property of a shop
+
+Real world:
+TreeMap → uses compareTo() to maintain sorted keys
+PriorityQueue → uses compareTo() or Comparator to determine priority
+Elasticsearch result ranking → Comparator chain (score, then date, then id)
+
+Interview tip:
+"Override equals() and hashCode() together — always. Breaking one without the other
+causes silent bugs in HashMap and HashSet that are extremely hard to trace.
+Comparable is for natural order inside the class, Comparator is for external, flexible ordering."
+
+The question I ask myself:
+"Do I need to put this object in a HashMap or HashSet?"
++ Yes → override both equals() and hashCode()
+  "Does this class have a single natural ordering?"
++ Yes → implement Comparable
+  "Do I need multiple orderings, or ordering from outside?"
++ Yes → use Comparator
 
 ## Stream API
 
@@ -340,6 +505,36 @@ Integer → object, heap, can be null, slower
 Use Integer when: null needed, used in collections (List<Integer>)
 Use int when: calculations, method variables
 
+Custom Collector — when built-in is not enough:
+Standard collectors (toList, groupingBy, joining) cover most cases.
+But sometimes I need domain-specific aggregation → custom Collector.
+
+// Problem: group shops by city and count active ones per city
+// Built-in groupingBy + counting works here:
+Map<String, Long> activePerCity = shops.stream()
+.filter(Shop::isActive)
+.collect(Collectors.groupingBy(Shop::getCity, Collectors.counting()));
+
+// More complex: custom summary object per category
+Map<String, ShopSummary> summary = shops.stream()
+.collect(Collectors.groupingBy(
+Shop::getCategory,
+Collectors.collectingAndThen(
+Collectors.toList(),
+list -> new ShopSummary(list.size(), list.stream()
+.mapToDouble(Shop::getRating).average().orElse(0.0))
+)
+));
+
+Key Collector combinators:
+Collectors.groupingBy(classifier)                → Map<K, List<T>>
+Collectors.groupingBy(classifier, downstream)    → Map<K, R> with custom aggregation
+Collectors.counting()                            → Long count per group
+Collectors.summingInt(mapper)                    → sum per group
+Collectors.averagingDouble(mapper)               → average per group
+Collectors.collectingAndThen(downstream, finisher) → transform final result
+Collectors.toUnmodifiableList()                  → immutable result
+
 Real world:
 Rakuten — ShopSearchService:
 shops.stream()
@@ -354,58 +549,15 @@ Interview tips:
 "Streams are lazy — nothing runs without a terminal operation."
 "Parallel streams aren't always faster — benchmark first."
 "Use IntStream for numeric operations to avoid boxing overhead."
+"groupingBy + downstream collector is the key to complex aggregations."
 
 The question I ask myself:
 "Am I transforming a collection?" → Stream
 "Do I need parallel processing on large data?" → parallelStream (carefully)
 "Am I doing numeric aggregation?" → IntStream/LongStream
+"Do I need grouping + aggregation?" → groupingBy + downstream collector
 
-## Optional
-
-Designed for return types only — to express "this might not exist."
-Replaces null returns from methods, especially repository calls.
-
-// Correct usage — return type:
-public Optional<User> findById(Long id) { ... }
-
-// How to use it properly:
-optional.orElse(defaultValue)           // return default if empty
-optional.orElseThrow(() -> new Ex())    // throw if empty
-optional.ifPresent(u -> process(u))     // run if present
-optional.map(User::getName)             // transform if present
-.orElse("Unknown")
-
-// Most common mistake:
-optional.get() //  — throws NoSuchElementException if empty
-// never use get() without checking
-
-Anti-patterns:
-1. Field → never use Optional as a class field
-   private Optional<String> phone; // 
-   → Not serializable, Jackson issues, memory overhead
-   → Use String phone; // null is fine as a field
-
-2. Method parameter → never pass Optional as parameter
-   public void update(Optional<String> name) // 
-   → Use String name instead, null can be passed
-
-3. Nested Optional → never
-   Optional<Optional<String>> //  — always a design mistake
-
-Real world:
-Rakuten — zipCodeRepository.findByZipCode(zipCode) → Optional<ZipCode>
-.orElseThrow(() -> new ValidationException("郵便番号が存在しません"))
-Spring Data — findById() returns Optional by default
-
-Interview tip:
-"Optional is for return types only — not fields or parameters.
-Never call get() directly — always use orElse or orElseThrow."
-
-The question I ask myself:
-"Can this method return nothing?"
-+ Yes → Optional return type
-  "Is this a field or parameter?"
-+ Yes → don't use Optional, use null or empty string
+## Stream — Quick Reference
 
 I want to convert:
 → map() → Stream<T> → Stream<R>
@@ -430,13 +582,10 @@ I want an average:
 
 Largest/smallest:
 → mapToInt().max()
-
 → mapToInt().min()
 
 To add to a list:
 → toList()
-
-## Stream — Quick Reference
 
 Sorting:
 .sorted()                                        → alphabetical
@@ -454,14 +603,14 @@ Matching:
 .noneMatch(s -> s.isEmpty())       → none match → boolean
 
 Joining:
-.collect(Collectors.joining(", "))           → "Berat, Ali, Ayşe"
-.collect(Collectors.joining(", ", "[", "]")) → "[Berat, Ali, Ayşe]"
+.collect(Collectors.joining(", "))           → "Berat, Ali, Ayse"
+.collect(Collectors.joining(", ", "[", "]")) → "[Berat, Ali, Ayse]"
 
 Common mistakes:
 s.length    → s.length()   — it's a method, not a field
 !==         → !=           — not a valid operator
 String::toUpperCase   — no parentheses in method reference
-String::toUpperCase()  — no parentheses allowed
+String::toUpperCase() — no parentheses allowed
 
 Even/odd:
 n % 2 == 0  → even
@@ -476,6 +625,53 @@ Does it all match:
 → allMatch()
 → anyMatch()
 → noneMatch()
+
+## Optional
+
+Designed for return types only — to express "this might not exist."
+Replaces null returns from methods, especially repository calls.
+
+// Correct usage — return type:
+public Optional<User> findById(Long id) { ... }
+
+// How to use it properly:
+optional.orElse(defaultValue)           // return default if empty
+optional.orElseThrow(() -> new Ex())    // throw if empty
+optional.ifPresent(u -> process(u))     // run if present
+optional.map(User::getName)             // transform if present
+.orElse("Unknown")
+
+// Most common mistake:
+optional.get() // throws NoSuchElementException if empty
+// never use get() without checking
+
+Anti-patterns:
+1. Field → never use Optional as a class field
+   private Optional<String> phone; //
+   → Not serializable, Jackson issues, memory overhead
+   → Use String phone; // null is fine as a field
+
+2. Method parameter → never pass Optional as parameter
+   public void update(Optional<String> name) //
+   → Use String name instead, null can be passed
+
+3. Nested Optional → never
+   Optional<Optional<String>> // always a design mistake
+
+Real world:
+Rakuten — zipCodeRepository.findByZipCode(zipCode) → Optional<ZipCode>
+.orElseThrow(() -> new ValidationException("postal code does not exist"))
+Spring Data — findById() returns Optional by default
+
+Interview tip:
+"Optional is for return types only — not fields or parameters.
+Never call get() directly — always use orElse or orElseThrow."
+
+The question I ask myself:
+"Can this method return nothing?"
++ Yes → Optional return type
+  "Is this a field or parameter?"
++ Yes → don't use Optional, use null or empty string
 
 ## Functional Interfaces
 
@@ -517,20 +713,20 @@ Compiler error if you add a second abstract method — safe contract.
 public interface Calculator {
 int calculate(int a, int b);
 }
-Calculator add = (a, b) -> a + b;
+Calculator add      = (a, b) -> a + b;
 Calculator multiply = (a, b) -> a * b;
 
 Side-effect isolation:
 // WRONG — mutable shared state in lambda:
 List<String> results = new ArrayList<>();
-list.stream().forEach(s -> results.add(s)); // not thread-safe 
+list.stream().forEach(s -> results.add(s)); // not thread-safe
 
 // CORRECT — no side effects:
-List<String> results = list.stream().toList(); // 
+List<String> results = list.stream().toList();
 
 Rakuten connection:
 .map(this::createTireSizeSafely)  → Function
-.flatMap(Optional::stream)         → Function  
+.flatMap(Optional::stream)         → Function
 .filter(shop -> shop.isActive())   → Predicate
 .forEach(s -> process(s))          → Consumer
 optional.orElseThrow(() -> new ValidationException()) → Supplier
@@ -552,3 +748,226 @@ The question I ask myself:
 "Does this lambda test, transform, produce, or consume?"
 → That tells me which functional interface I'm using.
 
+## Specification Pattern
+
+Problem:
+Business rules pile up inside repository or service methods.
+findByAgeGreaterThanAndCityAndActiveTrue() → fragile, unreadable, impossible to combine.
+
+Solution:
+Each rule becomes a self-contained object — a Specification.
+Rules can be combined with and(), or(), not() → composable query logic.
+
+public interface Specification<T> {
+boolean isSatisfiedBy(T entity);
+
+    default Specification<T> and(Specification<T> other) {
+        return entity -> this.isSatisfiedBy(entity) && other.isSatisfiedBy(entity);
+    }
+
+    default Specification<T> or(Specification<T> other) {
+        return entity -> this.isSatisfiedBy(entity) || other.isSatisfiedBy(entity);
+    }
+
+    default Specification<T> not() {
+        return entity -> !this.isSatisfiedBy(entity);
+    }
+}
+
+// Rules as objects:
+Specification<Shop> isActive   = shop -> shop.isActive();
+Specification<Shop> inTokyo    = shop -> shop.getCity().equals("Tokyo");
+Specification<Shop> highRating = shop -> shop.getRating() >= 4.5;
+
+// Composable — no new code needed:
+Specification<Shop> premium = isActive.and(inTokyo).and(highRating);
+
+List<Shop> result = shops.stream()
+.filter(premium::isSatisfiedBy)
+.toList();
+
+Spring Data integration:
+Spring Data JPA has its own Specification interface.
+Specifications translate to JPA Criteria queries — dynamic SQL at the DB level.
+
+shopRepository.findAll(isActive.and(inTokyo));
+
+Trade-offs:
++ Rules are named, testable, reusable
++ Combination is flexible — no if/else needed
++ New rule = new class, nothing changes
+- Overhead for simple cases — not worth it for 1-2 fixed filters
+- JPA Criteria API is verbose → use QueryDSL or Spring Data Specification instead
+
+Rakuten connection:
+ShopSearchService had filter conditions scattered across the method.
+A Specification chain would have made each condition a named, testable unit.
+
+Interview tip:
+"Specification pattern is domain logic as objects — each rule is a class,
+rules compose naturally. It's OCP in action: add a new filter rule without touching existing code."
+
+The question I ask myself:
+"Are my filter/query conditions growing and mixing with infrastructure code?"
++ Yes → extract them into Specifications
+
+## Strategy Pattern
+
+Problem:
+Business logic that varies by case lives inside if/else or switch blocks.
+Every new case → modify the existing class → OCP violation.
+
+Solution:
+Each algorithm/behavior becomes its own class.
+The context class holds a reference to the strategy interface, not a concrete class.
+
+// Strategy interface:
+public interface ShippingStrategy {
+double calculate(Order order);
+}
+
+// Strategies:
+public class StandardShipping implements ShippingStrategy {
+public double calculate(Order order) {
+return order.getWeight() * 1.5;
+}
+}
+
+public class ExpressShipping implements ShippingStrategy {
+public double calculate(Order order) {
+return order.getWeight() * 3.0 + 10.0;
+}
+}
+
+public class FreeShipping implements ShippingStrategy {
+public double calculate(Order order) {
+return 0.0;
+}
+}
+
+// Context — doesn't know which strategy runs:
+public class OrderService {
+private final ShippingStrategy shippingStrategy;
+
+    public OrderService(ShippingStrategy shippingStrategy) {
+        this.shippingStrategy = shippingStrategy;
+    }
+
+    public double getShippingCost(Order order) {
+        return shippingStrategy.calculate(order); // runtime decision
+    }
+}
+
+// Injection decides which strategy runs:
+OrderService service = new OrderService(new ExpressShipping());
+
+Connection to DIP:
+OrderService depends on ShippingStrategy (interface), not a concrete class.
+Strategy + DIP = loose coupling + easy to test + easy to extend.
+
+Connection to OCP:
+New shipping type → new class, zero changes to OrderService.
+
+Trade-offs:
++ Easy to add new behaviors without touching existing code
++ Each strategy independently testable
++ Clean swap at runtime or via config/injection
+- More classes for simple cases
+- Can be overkill if there are only 2 fixed behaviors
+
+Rakuten connection:
+Different notification channels (email, SMS, push) → NotificationStrategy
+Each channel is a strategy — OrderService doesn't care which one runs.
+
+Real world:
+Payment processors → StripeStrategy, PayPalStrategy, BankTransferStrategy
+Discount calculation → PercentageDiscount, FixedDiscount, MemberDiscount
+Sorting algorithms → QuickSort, MergeSort, TimSort — same interface, different impl
+
+Interview tip:
+"Strategy pattern eliminates branching logic by turning behaviors into objects.
+It's polymorphism applied deliberately — the context doesn't decide,
+the injected strategy does."
+
+The question I ask myself:
+"Do I have an if/else or switch that selects a behavior at runtime?"
++ Yes → extract each branch into a Strategy class
+
+## Null Object Pattern
+
+Problem:
+Code is full of null checks. Every caller must remember to check.
+One forgotten null check → NullPointerException in production.
+
+if (user != null) {
+if (user.getAddress() != null) {
+if (user.getAddress().getCity() != null) {
+// finally do something
+}
+}
+}
+
+Solution:
+Instead of returning null, return an object that does nothing (safe default).
+The caller never needs to check — just calls the method.
+
+// Interface:
+public interface Logger {
+void log(String message);
+}
+
+// Real implementation:
+public class ConsoleLogger implements Logger {
+public void log(String message) {
+System.out.println(message);
+}
+}
+
+// Null Object — does nothing, but safe to call:
+public class NoOpLogger implements Logger {
+public void log(String message) {
+// intentionally empty — no logging
+}
+}
+
+// Caller — no null check needed:
+public class OrderService {
+private final Logger logger;
+
+    public OrderService(Logger logger) {
+        this.logger = logger; // inject NoOpLogger if no logging needed
+    }
+
+    public void processOrder(Order order) {
+        logger.log("Processing: " + order.getId()); // always safe
+    }
+}
+
+Null Object vs Optional:
+Optional → "this value might be absent, caller decides what to do"
+Null Object → "there is always an object, it just does nothing"
+
+Use Optional when: the absence itself is meaningful and the caller must handle it.
+Use Null Object when: the caller shouldn't need to know or care about absence.
+
+Real world:
+Spring's EmptyResultDataAccessException vs returning empty list → empty list is a Null Object
+Collections.emptyList() → Null Object for collections — never null, always iterable
+Logging frameworks — disabled logger levels do nothing without null checks
+
+Trade-offs:
++ Eliminates null checks at call sites
++ Simplifies callers — uniform interface always
+- Hidden behavior — null object silently does nothing, might mask bugs
+- Not appropriate when absence MUST be handled differently
+
+Interview tip:
+"Null Object replaces null with an object that has safe, do-nothing behavior.
+The caller is always clean. The trade-off is that it can hide real absence —
+so use it when the absent case truly has no meaningful behavior."
+
+The question I ask myself:
+"Is this null check repeated everywhere, always resulting in 'do nothing'?"
++ Yes → Null Object pattern
+  "Does the caller need to know about absence?"
++ Yes → Optional is the better fit
