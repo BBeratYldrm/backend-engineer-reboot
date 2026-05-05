@@ -13,15 +13,15 @@ Monolith: one transaction, ACID guaranteed.
 Microservices: each service has its own DB, no shared transaction.
 
 Problem:
-Order created ✅ → Payment taken ✅ → Stock service crashes ❌
+Order created  → Payment taken  → Stock service crashes 
 System is now inconsistent — order exists, payment taken, stock not updated.
 
 SAGA solves this: break the distributed operation into a sequence of local transactions,
 each with a compensating transaction if something goes wrong.
 
 Two outcomes only — no partial state:
-All steps succeed → operation complete ✅
-One step fails → previous steps compensated → clean state ✅
+All steps succeed → operation complete 
+One step fails → previous steps compensated → clean state 
 
 ## Compensating Transaction
 
@@ -52,7 +52,7 @@ No one calls anyone directly. Everyone reacts to events.
 
 If Notification crashes:
 → Kafka holds the message (durability)
-→ Notification restarts → reads from last offset → processes ✅
+→ Notification restarts → reads from last offset → processes 
 
 Trade-offs:
 + Loosely coupled — services don't know about each other
