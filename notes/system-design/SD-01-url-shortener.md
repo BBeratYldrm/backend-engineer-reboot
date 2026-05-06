@@ -213,6 +213,49 @@ Cleanup:
 → Nightly scheduled job (cron) → delete expired records from DB
 → Redis handles itself via TTL
 
+### Snowflake ID — Distributed Unique ID Generation
+
+Problem with auto-increment in sharded systems:
+Shard 1: ID 1, 2, 3...
+Shard 2: ID 1, 2, 3...  ← collision!
+Shard 3: ID 1, 2, 3...  ← collision!
+
+Each shard generates its own sequence → duplicates inevitable.
+
+Snowflake solution (Twitter):
+[41 bit timestamp][10 bit machine ID][12 bit sequence number]
+= 63 bit → globally unique ID
+
+41 bit timestamp  → milliseconds since epoch → ~69 years range
+10 bit machine ID → which server/datacenter generated it
+12 bit sequence   → up to 4096 IDs per millisecond per machine
+
+Result:
+Shard 1 (machine 001) → timestamp + 001 + seq → unique
+Shard 2 (machine 002) → timestamp + 002 + seq → unique
+Shard 3 (machine 003) → timestamp + 003 + seq → unique
+
+Never collides — machine ID guarantees uniqueness across shards.
+
+Bonus: Snowflake IDs are sortable by time.
+Higher ID = more recent. No extra timestamp column needed.
+
+When to use Snowflake:
++ Multiple DB shards generating IDs simultaneously
++ Very high throughput — millions of IDs per second
++ Distributed systems across datacenters
+
+When auto-increment is enough:
+- Single DB, low-medium scale
+- No sharding needed
+- Simplicity preferred
+
+URL Shortener:
+Small scale  → auto-increment + Base62 sufficient
+Large scale + sharding → Snowflake + Base62
+
+---
+
 ## Trade-offs
 
 Base62 vs UUID:
