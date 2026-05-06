@@ -156,6 +156,63 @@ Redis Cache
 
 ---
 
+## Step 7 — Additional Constraints
+
+### Custom URLs
+
+User can request custom short code (e.g. bit.ly/berat-blog).
+
+API parameter: customUrl=true
+
+Flow:
+customUrl=true  → use user-provided string as key
+→ check DB: already taken?
+YES → return 409 Conflict
+NO  → save directly, skip Base62
+
+customUrl=false → generate via Base62 (default flow)
+
+Namespace separation to avoid collision:
+Base62 generated → starts with digit:  "1abc2"
+Custom URL       → starts with letter: "berat-blog"
+Structurally impossible to collide — no DB check needed.
+
+Trade-off:
++ No collision between custom and generated URLs
+- Slightly reduces Base62 combination space (first char = digit only)
+- 9 × 62^5 = ~8 billion combinations — still more than enough
+
+### Security — Sequential ID Problem
+
+Sequential DB IDs → sequential Base62 output → predictable URLs.
+User gets bit.ly/2Td, can guess bit.ly/2Te is the next URL.
+
+Solution: hash the ID before Base62 encoding.
+ID 11157 → hash → random large number → Base62 → unpredictable output
+ID 11158 → hash → completely different number → different output
+
+In interviews: "I pass the ID through a hash function before Base62 encoding
+to make outputs unpredictable."
+
+### URL Expiration
+
+URLs expire after N days (e.g. 30 days).
+
+On creation:
+→ DB: add expires_at column (created_at + 30 days)
+→ Redis: set TTL = 30 days
+
+On redirect:
+→ Redis TTL expired → cache miss → goes to DB
+→ DB: check expires_at → expired → return 410 Gone
+→ 410 Gone vs 404 Not Found:
+404 → never existed
+410 → existed but permanently gone
+
+Cleanup:
+→ Nightly scheduled job (cron) → delete expired records from DB
+→ Redis handles itself via TTL
+
 ## Trade-offs
 
 Base62 vs UUID:
