@@ -1,5 +1,6 @@
 package com.berat.reboot.algorithms;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,5 +41,15 @@ public class ValidAnagram {
         }
 
         return false;
+    }
+
+    public boolean validAnagram2(String inputA, String inputB) {
+
+        char[] charA = inputA.toCharArray();
+        char[] charB = inputB.toCharArray();
+        Arrays.sort(charA);
+        Arrays.sort(charB);
+
+        return Arrays.equals(charA, charB);
     }
 }

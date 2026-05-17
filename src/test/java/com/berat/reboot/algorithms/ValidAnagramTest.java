@@ -17,6 +17,6 @@ public class ValidAnagramTest {
             "anagram, nagaram, true"
     })
     void validAnagram_shouldReturnExpectedResult(String inputA, String inputB, boolean expected) {
-        assertEquals(expected, validAnagram.validAnagram(inputA, inputB));
+        assertEquals(expected, validAnagram.validAnagram2(inputA, inputB));
     }
 }
