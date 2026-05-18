@@ -22,26 +22,27 @@ public class ValidPalindrome {
     }
 
     /**
-     * Approach 2 — Two Pointer (optimized)
+     * Approach 2 — Two Pointer O(1) space
      * Time Complexity:  O(n) — single pass through the string
-     * Space Complexity: O(1) — no extra data structure, only two pointers
+     * Space Complexity: O(1) — no cleaned string, pointers only
+     *
+     * Skip non-alphanumeric characters with inner while loops.
+     * Compare characters case-insensitively with toLowerCase.
+     * Mismatch found → not a palindrome. All matched → palindrome.
      */
     public boolean validPalindromeOptimized(String input) {
 
-        // remove non-alphanumeric characters and lowercase
-        String cleaned = input.replaceAll("[^a-zA-Z0-9]", "").toLowerCase();
-
         int left = 0;
-        int right = cleaned.length() - 1;
+        int right = input.length() - 1;
 
         // move pointers toward each other
         while (left < right) {
+            while (left < right && !Character.isLetterOrDigit(input.charAt(left))) left++;
+            while (left < right && !Character.isLetterOrDigit(input.charAt(right))) right--;
 
-            // mismatch found — not a palindrome
-            if (cleaned.charAt(left) != cleaned.charAt(right)) {
+            if (Character.toLowerCase(input.charAt(left)) != Character.toLowerCase(input.charAt(right))) {
                 return false;
             }
-
             left++;
             right--;
         }
