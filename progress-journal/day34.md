@@ -3,27 +3,27 @@
 ## What I learned
 
 ### Algorithm — Two Pointer
-- RemoveDuplicates — mantık tam oturdu bu sefer
-    - left = son unique pozisyonu, right = kaşif
-    - right yeni unique bulunca left genişler ve oraya yazar
-    - geri kalan sağ taraf çöp, kimse bakmıyor
-    - return left + 1 çünkü index 0'dan başlıyor
+- RemoveDuplicates — the mechanics finally clicked
+    - left = position of last unique element, right = scanner
+    - when right finds a new unique, left moves forward and writes it there
+    - remaining right side is garbage, nobody looks at it
+    - return left + 1 because index starts at 0
 
-- MergeSortedArray — three pointer, sondan başlama
-    - pointer1 = nums1'in son gerçek elemanı
-    - pointer2 = nums2'nin sonu
-    - writePosition = nums1'in son indexi
-    - sondan başlama sebebi: baştan başlasak gerçek elemanları ezeriz
-    - nums2 bitince nums1'de kalanlar zaten yerinde
+- MergeSortedArray — three pointer approach, start from the end
+    - pointer1 = last valid element in nums1
+    - pointer2 = end of nums2
+    - writePosition = last index of nums1
+    - reason for starting from the end: starting from the front would overwrite real elements
+    - when nums2 is exhausted, remaining nums1 elements are already in place
 
 ## How I feel
-Hafif bir akşamdı. Beyin tam çalışmıyordu ama yine de bir şeyler çıktı.
-RemoveDuplicates mantığı bugün gerçekten oturdu — "right unique bulunca
-sola taşıyor, left pozisyonu işaretliyor" cümlesi her şeyi netleştirdi.
-Sıfır gün geçirmemek önemli, tempo korundu.
+Low energy evening but kept the streak alive.
+RemoveDuplicates finally made sense — "right carries unique elements to the left,
+left marks the position" was the sentence that clicked everything into place.
+Not every session needs to be intense. Showing up matters.
 
 ## Next
-- Two Pointer devam — Remove Element, Majority Element
+- Two Pointer — Remove Element, Majority Element
 - System Design — SD-06 Search Autocomplete
-- Java Interview Crash Course — Modül 1
+- Java Interview Crash Course — Module 1
 - AWS basics
