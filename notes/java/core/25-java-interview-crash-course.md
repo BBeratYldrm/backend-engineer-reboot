@@ -1,10 +1,11 @@
-# [J-25] Java Interview Crash Course
+# Java Interview Crash Course
 
 ## Keywords
 java-core · streams · comparable · comparator · hashmap-internal ·
 concurrency · thread-safe · singleton · deadlock · completablefuture ·
 concurrent-hashmap · spring-boot · exception-handling · retry · pagination ·
-kafka-idempotency · checked-exception · unchecked-exception
+kafka-idempotency · checked-exception · unchecked-exception · lru-cache ·
+producer-consumer · immutable-class · sql · joins · pagination-sql
 
 ---
 
@@ -41,7 +42,7 @@ Comparator:
 
 ```java
 // Comparable
-class Employee implements Comparable {
+class Employee implements Comparable<Employee> {
     public int compareTo(Employee other) {
         return this.salary - other.salary;
     }
@@ -74,12 +75,12 @@ flatMap() → transforms + flattens nested structures
 
 ```java
 // map — stays nested
-List<List> nested = users.stream()
+List<List<Order>> nested = users.stream()
     .map(user -> user.getOrders())
     .collect(Collectors.toList());
 
 // flatMap — flattened
-List allOrders = users.stream()
+List<Order> allOrders = users.stream()
     .flatMap(user -> user.getOrders().stream())
     .collect(Collectors.toList());
 ```
@@ -139,8 +140,8 @@ How to prevent:
 Run independent operations in parallel.
 
 ```java
-CompletableFuture user = CompletableFuture.supplyAsync(() -> getUser());
-CompletableFuture orders = CompletableFuture.supplyAsync(() -> getOrders());
+CompletableFuture<String> user = CompletableFuture.supplyAsync(() -> getUser());
+CompletableFuture<String> orders = CompletableFuture.supplyAsync(() -> getOrders());
 
 CompletableFuture.allOf(user, orders).join();
 ```
@@ -212,14 +213,14 @@ Global Exception Handler:
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity handleNotFound(ResourceNotFoundException ex) {
+    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex) {
         return ResponseEntity
             .status(HttpStatus.NOT_FOUND)
             .body(new ErrorResponse(ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity handleGeneral(Exception ex) {
+    public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(new ErrorResponse("Something went wrong"));
@@ -275,11 +276,11 @@ Why: fetching large datasets at once increases response time and memory usage.
 
 ```java
 // Repository
-Page findAll(Pageable pageable);
+Page<User> findAll(Pageable pageable);
 
 // Controller
 @GetMapping("/users")
-public Page getUsers(
+public Page<User> getUsers(
     @RequestParam int page,
     @RequestParam int size) {
 
@@ -318,3 +319,237 @@ Interview answer:
 "I use an idempotency key — the unique message ID. Before processing,
 I check Redis or DB whether this ID was already handled.
 If yes, I skip. If no, I process and record the ID."
+
+---
+
+## Module 4 — Coding Problems
+
+### LRU Cache
+
+LRU = Least Recently Used — evicts the element that has not been used for the longest time.
+
+Use case: in-memory cache with limited capacity.
+Production: Redis handles this automatically with eviction policies.
+Interview: tests understanding of HashMap + LinkedList combination.
+
+```java
+public class LRUCache {
+
+    private final int capacity;
+    private final LinkedHashMap<Integer, Integer> cache;
+
+    public LRUCache(int capacity) {
+        this.capacity = capacity;
+        this.cache = new LinkedHashMap<>(capacity, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<Integer, Integer> eldest) {
+                return size() > capacity;
+            }
+        };
+    }
+
+    public int get(int key) {
+        return cache.getOrDefault(key, -1);
+    }
+
+    public void put(int key, int value) {
+        cache.put(key, value);
+    }
+}
+```
+
+Why LinkedHashMap?
+- accessOrder=true → every get/put moves that element to the tail
+- Head = oldest (least recently used), Tail = newest
+- removeEldestEntry → automatically evicts when size exceeds capacity
+
+Why not just HashMap?
+- HashMap has no ordering — cannot track which element was used least recently
+
+Key insight:
+- final on a field → reference cannot change
+- final does not protect the content of mutable objects (List, Map)
+- defensive copy needed for mutable fields
+
+---
+
+### Producer-Consumer
+
+Classic multi-threading problem — producer generates data, consumer processes it
+at a different speed. Coordination needed to avoid race conditions.
+
+```java
+private static final BlockingQueue<Integer> queue = new LinkedBlockingQueue<>(5);
+
+static class Producer implements Runnable {
+    public void run() {
+        for (int i = 1; i <= 10; i++) {
+            try {
+                queue.put(i);       // blocks if queue is full
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+}
+
+static class Consumer implements Runnable {
+    public void run() {
+        for (int i = 1; i <= 10; i++) {
+            try {
+                int item = queue.take(); // blocks if queue is empty
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+}
+```
+
+BlockingQueue:
+- put() → blocks when full, waits for consumer to take
+- take() → blocks when empty, waits for producer to add
+- No manual wait/notify needed
+
+Without BlockingQueue → manual synchronized + wait() + notify()
+
+---
+
+### Immutable Class
+
+Immutable = once created, state cannot change.
+Examples in Java: String, Integer, LocalDate
+
+Why use it?
+- Thread-safe by default — multiple threads can read without locking
+- Safe as HashMap key — hash never changes
+- Predictable — no unexpected state changes
+
+4 rules to write an immutable class:
+1. Class must be final — cannot be extended
+2. Fields must be private final — cannot be reassigned
+3. No setters
+4. Defensive copy for mutable fields
+
+```java
+public final class ImmutableTeam {
+    private final String name;
+    private final List<String> members;
+
+    public ImmutableTeam(String name, List<String> members) {
+        this.name = name;
+        this.members = new ArrayList<>(members); // defensive copy on input
+    }
+
+    public String getName() { return name; }
+
+    public List<String> getMembers() {
+        return Collections.unmodifiableList(members); // defensive copy on output
+    }
+}
+```
+
+Why defensive copy?
+- final protects the reference, not the content
+- Without it: getMembers().add("x") would mutate the internal list
+- unmodifiableList → throws UnsupportedOperationException on modification
+
+---
+
+## Module 5 — SQL
+
+### 2nd Highest Salary
+
+```sql
+-- Option 1: subquery
+SELECT MAX(salary)
+FROM employee
+WHERE salary < (SELECT MAX(salary) FROM employee);
+
+-- Option 2: cleaner
+SELECT DISTINCT salary
+FROM employee
+ORDER BY salary DESC
+LIMIT 1 OFFSET 1;
+```
+
+DISTINCT → eliminates duplicate salaries before ranking
+OFFSET 1 → skip the first row (highest), return the second
+
+---
+
+### WHERE vs HAVING
+
+WHERE → filters rows BEFORE GROUP BY — row level
+HAVING → filters groups AFTER GROUP BY — group level
+
+```sql
+-- WHERE: filter individual rows
+SELECT * FROM employee
+WHERE salary > 3000;
+
+-- HAVING: filter after aggregation
+SELECT department, AVG(salary)
+FROM employee
+GROUP BY department
+HAVING AVG(salary) > 5000;
+```
+
+Rule: aggregate functions (AVG, SUM, COUNT) in filter condition → HAVING
+
+---
+
+### INNER JOIN vs LEFT JOIN
+
+```sql
+-- INNER JOIN: only matching rows from both tables
+SELECT e.name, d.name
+FROM employee e
+INNER JOIN department d ON e.dept_id = d.id;
+
+-- LEFT JOIN: all rows from left table, NULL if no match on right
+SELECT e.name, d.name
+FROM employee e
+LEFT JOIN department d ON e.dept_id = d.id;
+```
+
+- INNER JOIN → intersection, both sides must have matching value
+- LEFT JOIN → all left rows included, right side NULL if no match
+
+When to use:
+- "Employees who have a department" → INNER JOIN
+- "All employees, show department if exists" → LEFT JOIN
+
+---
+
+### Remove Duplicate Rows
+
+```sql
+-- Find duplicates
+SELECT name, salary, COUNT(*)
+FROM employee
+GROUP BY name, salary
+HAVING COUNT(*) > 1;
+
+-- Delete duplicates, keep one
+DELETE FROM employee
+WHERE id NOT IN (
+    SELECT MIN(id)
+    FROM employee
+    GROUP BY name, salary
+);
+```
+
+Keep the row with the smallest id, delete the rest.
+
+---
+
+### Department-wise Max Salary
+
+```sql
+SELECT department, MAX(salary)
+FROM employee
+GROUP BY department;
+```
