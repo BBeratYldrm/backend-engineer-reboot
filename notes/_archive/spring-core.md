@@ -222,7 +222,7 @@ The question I ask myself:
 "Can this method fail silently and leave data inconsistent?"
 + Yes → @Transactional
 + Is it called from same class? → move to separate service
-+ Can it throw checked exception? → add rollbackFor
++ Can it throw  checked exception? → add rollbackFor
 
 ---
 
