@@ -2,6 +2,7 @@ package com.berat.reboot.javacore;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class TaskManager {
 
@@ -9,29 +10,31 @@ public class TaskManager {
     private final Thread[] taskWorkers;
     private volatile boolean running;
 
-    public TaskManager(int threadCount) {
-        this.taskQueue = new LinkedBlockingQueue<>();
+    public TaskManager(int threadCount, int queueCapacity) {
+        this.taskQueue = new LinkedBlockingQueue<>(queueCapacity);
         this.taskWorkers = new Thread[threadCount];
         this.running = true;
     }
 
     public void start() {
         for (int i = 0; i < taskWorkers.length; i++) {
-            taskWorkers[i] = new Thread(this::workerPool);
+            taskWorkers[i] = new Thread(this::workerPool, "Worker-" + i);
             taskWorkers[i].start();
         }
     }
 
     private void workerPool() {
-        while (running) {
+        while (running || !taskQueue.isEmpty()) {
             try {
-                Runnable task = taskQueue.take();
-                task.run();
+                Runnable task = taskQueue.poll(500, TimeUnit.MILLISECONDS);
+                if (task != null) {
+                    task.run();
+                }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception e) {
-                System.err.println("Task Failed : " + e.getMessage());
+                System.err.println("Task Failed: " + e.getMessage());
             }
         }
     }
